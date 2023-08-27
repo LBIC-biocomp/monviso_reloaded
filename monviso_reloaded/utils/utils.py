@@ -1,11 +1,10 @@
 import contextlib
 from typing import Union
 from typing import List
-from typing import Literal
+from typing import Dict
 
 import os
 import logging
-import shutil
 
 import requests
 
@@ -24,7 +23,6 @@ logger.addHandler(file_handler)
 
 console_logger =  logging.getLogger(__name__)
 console_logger.setLevel(logging.DEBUG)
-console_logger.basicConfig("%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
 def warning_message(msg: str) -> None:
     """Warning message
@@ -43,13 +41,13 @@ def info_message(msg: str) -> None:
     console_logger.info(msg)
 
 
-def parse_input(mutation_file: str) -> Union[List, List]:
+def parse_input(mutation_file_path: str) -> Union[List, List]:
     """Parse the list of mutations and genes from the mutation_list file.
 
     :param mutation_list: path to the file containing the list of mutations and genes
     :return: The list of gene and mutations, the list of genes
     """
-    with open(mutation_file, "r") as my_file:
+    with open(mutation_file_path, "r") as my_file:
         content = my_file.read()
 
     blocks = [block.splitlines() for block in content.split("\n\n")]
@@ -68,35 +66,71 @@ def make_dir(dirname) -> None:
         os.mkdir(dirname)
 
 
-def make_gene_directories(blocks: List, master_directory: str) -> None:
+def get_parameters(parameters_path: str="parameters.dat") -> Dict:
+    """Collect the parameters from the parameters file if provided.
+
+    :param parameters_path: Path to the parameters file, defaults to "parameters.dat"
+    :return: Dict of keywords with the associated parameters
+    """
+    keywords = {
+        "RESOLUTION": None,
+        "SEQID": None,
+        "PDB_TO_USE": None,
+        "DB_LOCATION": None,
+        "HMMER_HOME": None,
+        "COBALT_HOME": None,
+        "MODEL_CUTOFF": None,
+        "NUM_OF_MOD_WT": None,
+        "NUM_OF_MOD_MUT": None,
+        "OUT_DIR": None,
+    }
+    keys = list(keywords)
+    if not os.path.exists(parameters_path):
+
+        error_message = (
+            f"Parameters file not found, please check the path provided."
+        )
+        raise TypeError(error_message)
+
+    with open(parameters_path, "r") as my_file:
+        lines = my_file.readlines()
+
+    for key in keys:
+        for line in lines:
+            if key in line:
+                value = line[line.find("=") + 1:].strip()
+                keywords[key] = value
+    return keywords
+
+
+def make_gene_directories(blocks: List, output_directory: str) -> None:
     """Create the necessary directories
     
     :param blocks: List containing the gene names and mutations
-    :param master_directory: path to the main directory
+    :param master_directory: path to the output directory
     :return:
     """
     block = 0
 
     while block < len(blocks):
         gene_name = blocks[block][0].upper()
-        if os.path.exists(gene_name):
-            message = f"Folder {gene_name} exists. Removing it and recreating."
+        folder_path = os.path.join(output_directory, gene_name)
+        if os.path.exists(folder_path):
+            message = f"Folder {folder_path} exists. Removing it and recreating."
             info_message(message)
-        make_dir(gene_name)
-        write_mutations_file(master_directory, gene_name, blocks, block)
+        make_dir(folder_path)
+        write_mutations_file(folder_path, blocks, block)
         block += 1
 
 
-def write_mutations_file(master_directory: str, gene_name:str, blocks: list,  block: int) -> None:
+def write_mutations_file(folder_path:str, blocks: list,  block: int) -> None:
     """Write the mutations file for each gene
 
-    :param master_directory: Main directory path
+    :param output_directory: Main directory path
     :param gene_name: Name of the gene taken into account
     :param blocks: List of all mutations and genes
     :param block: Position on the list
     """
-    folder_path = os.path.join(master_directory, gene_name)
-
     with open(os.path.join(folder_path, "mutations.txt"), "w") as newfile:
         mutation = 1
         while mutation < len(blocks[block]):
