@@ -9,7 +9,6 @@ Be creative! do whatever you want!
 """
 
 
-<<<<<<< HEAD
 def main():  # pragma: no cover
     """
     The main function executes on commands:
@@ -27,24 +26,6 @@ def main():  # pragma: no cover
         * Run an application (Flask, FastAPI, Django, etc.)
     """
     print("This will do something")
-=======
-# def main():  # pragma: no cover
-#     """
-#     The main function executes on commands:
-#     `python -m monviso_reloaded` and `$ monviso_reloaded `.
-
-#     This is your program's entry point.
-
-#     You can change this function to do whatever you want.
-#     Examples:
-#         * Run a test suite
-#         * Run a server
-#         * Do some other stuff
-#         * Run a command line application (Click, Typer, ArgParse)
-#         * List all available tasks
-#         * Run an application (Flask, FastAPI, Django, etc.)
-#     """
-#     print("This will do something")
 
 from monviso_reloaded.utils.utils import parse_input
 from monviso_reloaded.utils.utils import get_parameters
