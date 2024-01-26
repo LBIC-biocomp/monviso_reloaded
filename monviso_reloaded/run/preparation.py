@@ -1,30 +1,37 @@
-from pathlib import Path
 import argparse
 import contextlib
+from pathlib import Path
 
 
 def parse_isoform(infile) -> list[list[str]]:
     with open(infile, "r") as f:
         content = f.read()
 
-    return [block.splitlines() for block in content.split(">") if "sp|" in block]
+    return [
+        block.splitlines() for block in content.split(">") if "sp|" in block
+    ]
 
 
-def write_canonical_isoform_file(path: Path, isoforms: list, counter: int) -> None:
+def write_canonical_isoform_file(
+    path: Path, isoforms: list, counter: int
+) -> None:
     """Write the non canonical FASTA sequences
 
     :param path: Path to the GENE folder
     :param isoforms: List of isoforms
     :param counter: Counter to keep track of the list position
     """
-    with Path(path, "isoform0.fasta").open("w", encoding ="utf-8") as filename:
+    with Path(path, "isoform0.fasta").open("w", encoding="utf-8") as filename:
         filename.write(f">{str(isoforms[counter][0])}" + "\n")
         for line in isoforms[counter][1:]:
             filename.write(line)
             if line != isoforms[counter][-1]:
                 filename.write("\n")
 
-def write_non_canonical_isoform_file(path: Path, isoforms: list, counter: int, words: str) -> None:
+
+def write_non_canonical_isoform_file(
+    path: Path, isoforms: list, counter: int, words: str
+) -> None:
     """Write the non canonical FASTA sequences
 
     :param path: Path to the GENE folder
@@ -32,14 +39,19 @@ def write_non_canonical_isoform_file(path: Path, isoforms: list, counter: int, w
     :param counter: Counter to keep track of the list position
     :param words: ID of the isoform
     """
-    with Path(path, f"isoform{str(words[2])}.fasta").open("w", encoding ="utf-8") as filename:
+    with Path(path, f"isoform{str(words[2])}.fasta").open(
+        "w", encoding="utf-8"
+    ) as filename:
         filename.write(f">{str(isoforms[counter][0])}" + "\n")
         for line in isoforms[counter][1:]:
             filename.write(line)
             if line != isoforms[counter][-1]:
                 filename.write("\n")
 
-def get_isoforms_from_db(protein_list:list, outputs: argparse.Namespace, db_location: str) -> None:
+
+def get_isoforms_from_db(
+    protein_list: list, outputs: argparse.Namespace, db_location: str
+) -> None:
     """Extract the FASTA sequences from the DBs
 
     :param protein_list: List of gene names
@@ -55,7 +67,9 @@ def get_isoforms_from_db(protein_list:list, outputs: argparse.Namespace, db_loca
         name = f"GN={str(gene.upper())} "
         counter = 0
         while counter < len(isoforms):
-            if name in str(isoforms[counter][0]) and "Homo" in str(isoforms[counter][0]):
+            if name in str(isoforms[counter][0]) and "Homo" in str(
+                isoforms[counter][0]
+            ):
                 path = Path(outputs, str(gene))
                 filename = f"{str(path)}isoform0.fasta"
                 write_canonical_isoform_file(path, isoforms, counter)
@@ -69,12 +83,18 @@ def get_isoforms_from_db(protein_list:list, outputs: argparse.Namespace, db_loca
         numb = len(name)
         counter = 0
         while counter < len(isoforms):
-            if isoforms[counter][0][-numb:] == name and "Homo" in isoforms[counter][0]:
+            if (
+                isoforms[counter][0][-numb:] == name
+                and "Homo" in isoforms[counter][0]
+            ):
                 path = Path(outputs, str(gene))
                 words = isoforms[counter][0].split(" ")
-                write_non_canonical_isoform_file(path, isoforms, counter, words)
+                write_non_canonical_isoform_file(
+                    path, isoforms, counter, words
+                )
 
             counter += 1
+
 
 def build_master_isoform_file(path: Path) -> None:
     """Build the file to keep track of the isoforms
@@ -94,6 +114,6 @@ def build_master_isoform_file(path: Path) -> None:
 
     with contextlib.suppress(Exception):
         numbers.sort()
-    with Path("master_isoform.txt").open("w", encoding ="utf-8") as miso:
+    with Path("master_isoform.txt").open("w", encoding="utf-8") as miso:
         for i in numbers:
             miso.write(f"isoform{str(i)}.fasta\n")

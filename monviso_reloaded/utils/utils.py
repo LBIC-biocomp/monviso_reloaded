@@ -1,24 +1,19 @@
-from typing import Union
-from typing import List
-from typing import Dict
-from typing import Any
-from typing import Optional
-
-import os
-import logging
-import contextlib
-import requests
 import argparse
+import contextlib
+import logging
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
-from Bio.PDB import PDBParser
-from Bio.PDB import PDBIO
-from Bio.PDB import Selection
+import requests
 from Bio import SeqIO
+from Bio.PDB import PDBIO, PDBParser, Selection
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 file_handler = logging.FileHandler("LOGFILE.log")
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
@@ -45,7 +40,6 @@ def log_info_message(msg: str) -> None:
     logger.info(msg)
 
 
-
 def parse_input(mutation_file_path: argparse.Namespace) -> Union[List, List]:
     """Parse the list of mutations and genes from the mutation_list file.
 
@@ -65,6 +59,7 @@ def parse_input(mutation_file_path: argparse.Namespace) -> Union[List, List]:
 
     return blocks, protein_list
 
+
 def make_dir(dirname) -> None:
     """Create a directory
 
@@ -72,7 +67,10 @@ def make_dir(dirname) -> None:
     """
     Path(dirname).mkdir(exist_ok=True)
 
-def get_parameters(parameters_path: argparse.Namespace="parameters.dat") -> Dict:
+
+def get_parameters(
+    parameters_path: argparse.Namespace = "parameters.dat",
+) -> Dict:
     """Collect the parameters from the parameters file if provided.
 
     :param parameters_path: Path to the parameters file, defaults to "parameters.dat"
@@ -92,9 +90,7 @@ def get_parameters(parameters_path: argparse.Namespace="parameters.dat") -> Dict
     keys = list(keywords)
     if not Path(parameters_path).exists():
 
-        error_message = (
-            f"Parameters file not found in {parameters_path}, please check the path provided."
-        )
+        error_message = f"Parameters file not found in {parameters_path}, please check the path provided."
         raise TypeError(error_message)
 
     with Path(parameters_path).open() as my_file:
@@ -103,14 +99,16 @@ def get_parameters(parameters_path: argparse.Namespace="parameters.dat") -> Dict
     for key in keys:
         for line in lines:
             if key in line:
-                value = line[line.find("=") + 1:].strip()
+                value = line[line.find("=") + 1 :].strip()
                 keywords[key] = value
     return keywords
 
 
-def make_gene_directories(blocks: List, output_directory: argparse.Namespace) -> None:
+def make_gene_directories(
+    blocks: List, output_directory: argparse.Namespace
+) -> None:
     """Create the necessary directories
-    
+
     :param blocks: List containing the gene names and mutations
     :param master_directory: path to the output directory
     :return:
@@ -128,7 +126,7 @@ def make_gene_directories(blocks: List, output_directory: argparse.Namespace) ->
         block += 1
 
 
-def write_mutations_file(folder_path:str, blocks: list,  block: int) -> None:
+def write_mutations_file(folder_path: str, blocks: list, block: int) -> None:
     """Write the mutations file for each gene
 
     :param output_directory: Main directory path
@@ -137,7 +135,7 @@ def write_mutations_file(folder_path:str, blocks: list,  block: int) -> None:
     :param block: Position on the list
     """
     file_path = folder_path / "mutations.txt"
-    with file_path.open("w", encoding ="utf-8") as newfile:
+    with file_path.open("w", encoding="utf-8") as newfile:
         mutation = 1
         while mutation < len(blocks[block]):
             newfile.write(str(blocks[block][mutation]) + "\n")
@@ -145,12 +143,13 @@ def write_mutations_file(folder_path:str, blocks: list,  block: int) -> None:
 
 
 def sort_list(sub_list: List) -> List:
-    """Sort a list according to the second element 
-    
+    """Sort a list according to the second element
+
     i.e. a list that list the mutations has the res number as second element of the sublist
     :param sub_list:
     """
     return sorted(sub_list, key=lambda x: int(x[1]))
+
 
 def import_sequence(sequencefile: str) -> Any:
     """Import a sequence from a FASTA file
@@ -159,6 +158,7 @@ def import_sequence(sequencefile: str) -> Any:
     :return: fasta object
     """
     return SeqIO.read(sequencefile, "fasta")
+
 
 def download_pdb(pdbid: str) -> bool:
     """Download a pdb file
@@ -178,6 +178,7 @@ def download_pdb(pdbid: str) -> bool:
         pdb_file.write(response.content)
     return True
 
+
 def get_structure(pdbname: str) -> Any:
     """Open a PDB file
 
@@ -192,14 +193,15 @@ def get_structure(pdbname: str) -> Any:
 def check_empty_pdb(pdbid: str) -> int:
     """Verify that the PDB file is not empty
 
-    :param pdbid: PDBID 
+    :param pdbid: PDBID
     :return: Number of residues in the PDB
     """
     structure = get_structure(f"{pdbid}.pdb")
     io = PDBIO()
     io.set_structure(structure)
-    residues = Selection.unfold_entities(structure, 'R')
+    residues = Selection.unfold_entities(structure, "R")
     return len(residues)
+
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
 
@@ -250,7 +252,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         required=False,
     )
 
-    parameters_group = parser.add_argument_group("input", "manually provides the inputs")
+    parameters_group = parser.add_argument_group(
+        "input", "manually provides the inputs"
+    )
     parameters_group.add_argument(
         "-res",
         "--resolution",
@@ -303,25 +307,20 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         required=False,
     )
 
+
 def check_arguments(args: argparse.Namespace) -> None:
     """Verify that the necessary parameters have been provided
 
     :param args: passed arguments
     """
-    if (
-        not args.par_file
-        and (not args.db_home
-        or not args.cobalt_home
-        or not args.hmmer_home)
+    if not args.par_file and (
+        not args.db_home or not args.cobalt_home or not args.hmmer_home
     ):
         argument_error(
             "Specify a parameters file or insert the paths to the DBs, COBALT and HMMER manually"
         )
-    elif (
-        args.par_file
-        and (args.db_home
-        or args.cobalt_home
-        or args.hmmer_home)
+    elif args.par_file and (
+        args.db_home or args.cobalt_home or args.hmmer_home
     ):
         argument_error(
             "Either specify a parameters file or insert parameters manually"
@@ -336,24 +335,27 @@ def argument_error(msg: str) -> None:
     log_info_message(msg)
     raise TypeError(msg)
 
+
 def print_parameters(args: argparse.Namespace, parameters: Dict) -> None:
     """Print the parameters provided
 
     :param parameters: Provided parameters
     """
-    param = (f"\nResolution: {parameters['RESOLUTION']}\n"
-            f"SEQ ID: {parameters['SEQID']}\n"
-            f"WT MODELS TO PREPARE: {parameters['NUM_OF_MOD_WT']}\n"
-            f"MUTANTS MODEL TO PREPARE: {parameters['NUM_OF_MOD_MUT']}\n"
-            f"MAX PDBS AS TEMPLATES: {parameters['PDB_TO_USE']}\n"
-            f"RESIDUES CUTOFF: {parameters['MODEL_CUTOFF']}\n"
-            f"INPUT FILE: {args.input_file}\n"
-            f"OUTPUT DIRECTORY: {args.out_path}\n"
-            f"DATABASES DIRECTORY: {parameters['DB_LOCATION']}\n"
-            f"COBALT: {parameters['COBALT_HOME']}\n"
-            f"HMMER: {parameters['HMMER_HOME']}"
-            )
+    param = (
+        f"\nResolution: {parameters['RESOLUTION']}\n"
+        f"SEQ ID: {parameters['SEQID']}\n"
+        f"WT MODELS TO PREPARE: {parameters['NUM_OF_MOD_WT']}\n"
+        f"MUTANTS MODEL TO PREPARE: {parameters['NUM_OF_MOD_MUT']}\n"
+        f"MAX PDBS AS TEMPLATES: {parameters['PDB_TO_USE']}\n"
+        f"RESIDUES CUTOFF: {parameters['MODEL_CUTOFF']}\n"
+        f"INPUT FILE: {args.input_file}\n"
+        f"OUTPUT DIRECTORY: {args.out_path}\n"
+        f"DATABASES DIRECTORY: {parameters['DB_LOCATION']}\n"
+        f"COBALT: {parameters['COBALT_HOME']}\n"
+        f"HMMER: {parameters['HMMER_HOME']}"
+    )
     log_info_message(param)
+
 
 def merge_parameters(args: argparse.Namespace) -> Dict:
     """Make the parameters dictionary if they are passed as arguments
