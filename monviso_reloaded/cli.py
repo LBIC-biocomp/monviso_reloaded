@@ -52,8 +52,10 @@ def main(argv=None) -> None: #pragma no cover
 
     for gene in protein_list:
         gene_path = Path(args.out_path, gene)
-        os.chdir(gene_path)
-        build_master_isoform_file(gene_path)
+        os.chdir(gene_path) 
+        # Changing directory (i.e., previous line) not compatible with pathlib
+	# gene_path cannot be used as argument for build_baster_isoform_file
+        build_master_isoform_file(Path(os.getcwd()))
         check_output = run_hmm(gene_path, gene, parameters["RESOLUTION"],
                             parameters["SEQID"], parameters["HMMER_HOME"],
                             parameters["COBALT_HOME"], parameters["PDB_TO_USE"])

@@ -81,17 +81,16 @@ def build_master_isoform_file(path: Path) -> None:
 
     :param path: Path to the GENE directory
     """
-    print(path.absolute())
-    quit()
-    isolist = [file for file in Path(path).iterdir() if "fasta" in file]
+
+    isolist = [file for file in path.iterdir() if "fasta" in file.name]
     isolist.sort()
     numbers = []
     for i in isolist:
-        if str(i[:7]) == "isoform":
+        if i.name[:7] == "isoform":
             try:
-                numbers.append(int(i[7:-6]))
+                numbers.append(int(i.name[7:-6]))
             except Exception:
-                numbers.append(i[7:-6])
+                numbers.append(i.name[7:-6])
 
     with contextlib.suppress(Exception):
         numbers.sort()
