@@ -31,6 +31,7 @@ def read_requirements(path):
 
 setup(
     name="monviso_reloaded",
+    python_requires='>=3.9',
     version=read("monviso_reloaded", "VERSION"),
     description="Awesome monviso_reloaded created by Ciskio",
     url="https://github.com/Ciskio/monviso_reloaded/",

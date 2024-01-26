@@ -3,7 +3,6 @@ import argparse
 import contextlib
 
 
-
 def parse_isoform(infile) -> list[list[str]]:
     with open(infile, "r") as f:
         content = f.read()
@@ -82,6 +81,8 @@ def build_master_isoform_file(path: Path) -> None:
 
     :param path: Path to the GENE directory
     """
+    print(path.absolute())
+    quit()
     isolist = [file for file in Path(path).iterdir() if "fasta" in file]
     isolist.sort()
     numbers = []
