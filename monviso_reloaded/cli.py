@@ -1,5 +1,5 @@
 import sys
-from monviso_reloaded.parser import Parser
+from monviso_reloaded.base import Run
 
 def main(argv=None) -> None:  # pragma no cover
     """
@@ -10,8 +10,9 @@ def main(argv=None) -> None:  # pragma no cover
     :return: None
     """
     # arguments and parameters
-    parser = Parser()
-    args,parameters=parser.load_input(argv)
+    run= Run()
+    run.load_input(argv)
+    run.load_mutation_list()
 
 
 def init() -> None:

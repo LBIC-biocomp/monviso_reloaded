@@ -230,7 +230,7 @@ class Parser(argparse.ArgumentParser):
 
 
     def load_input(self,argv) -> (argparse.Namespace, Dict):
-        """Loads user input from the command line and parameters file.
+        """Load user input from the command line and parameters file.
 
         :param argv: command line arguments
         """
