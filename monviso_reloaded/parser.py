@@ -134,24 +134,20 @@ class Parser(argparse.ArgumentParser):
                 "Either specify a parameters file or insert parameters manually"
             )
 
-    def parse_input(self, mutation_file_path: argparse.Namespace) -> Union[List, List]:
+    def parse_input(self, mutation_file_path: argparse.Namespace) -> List:
         """Parse the list of mutations and genes from the mutation_list file.
 
         :param mutation_list: path to the file containing the list of mutations and genes
-        :return: The list of gene and mutations, the list of genes
+        :return: The list of gene and mutations
         """
         with Path(mutation_file_path).open() as my_file:
             content = my_file.read()
 
         blocks = [block.splitlines() for block in content.split("\n\n")]
         protein_list = []
-        block = 0
+  
 
-        while block < len(blocks):
-            protein_list.append(blocks[block][0].upper())
-            block += 1
-
-        return blocks, protein_list
+        return blocks
 
 
     def get_parameters(self,
