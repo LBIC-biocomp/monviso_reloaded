@@ -1,4 +1,7 @@
+from typing import Any, Dict, List, Union
 from .parser import Parser
+from .file_handler import FileHandler
+from .gene import Gene
 
 class Run:
     def __init__(self):
@@ -6,6 +9,7 @@ class Run:
         self.parameters=[]
         self.mutation_list=[]
         self.parser=Parser()
+        self.genes=[]
     
     def load_input(self,argv) -> None:
         """Load user input from the command line and parameters file
@@ -21,16 +25,15 @@ class Run:
 
         :param mutation_list: path to the file containing the list of mutations and genes
         """
-        blocks,protein_list=self.parser.parse_input(self.args.input_file)
-        print(blocks)
-        print(protein_list)
+        self.mutation_list=self.parser.parse_input(self.args.input_file)
         
+    def create_genes(self) -> None:
+        """Take the list of mutations of the genes saved in self.mutation_list, and
+        for each gene, create a Gene instance. All Gene instances are saved in the
+        self.gene list.
 
-
-class Gene:
-    def __init__(self):
-        pass
-
-class Isoform:
-    def __init__(self):
-        pass
+        :param mutation_list: A list of the blocks extracted from the input file.
+        At index 0, the list contains the name of the gene.
+        """
+        for i,gene_mutation_block in enumerate(self.mutation_list):
+            self.genes.append(Gene(gene_mutation_block))
