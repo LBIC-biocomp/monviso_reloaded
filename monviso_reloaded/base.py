@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Union
-from .parser import Parser
-from .file_handler import FileHandler
+from .input_parser import InputParser
+from .database_parser import DatabaseParser
 from .gene import Gene
 
 class Run:
@@ -8,7 +8,7 @@ class Run:
         self.args=[]
         self.parameters=[]
         self.mutation_list=[]
-        self.parser=Parser()
+        self.input_parser=InputParser()
         self.genes=[]
     
     def load_input(self,argv) -> None:
@@ -17,7 +17,7 @@ class Run:
 
         :param argv: command line arguments
         """
-        self.args,self.parameters=self.parser.load_input(argv)
+        self.args,self.parameters=self.input_parser.load_input(argv)
         
     def load_mutation_list(self) -> None:
         """Parse the list of mutations and genes from the mutation_list file
@@ -25,7 +25,7 @@ class Run:
 
         :param mutation_list: path to the file containing the list of mutations and genes
         """
-        self.mutation_list=self.parser.parse_input(self.args.input_file)
+        self.mutation_list=self.input_parser.parse_input(self.args.input_file)
         
     def create_genes(self) -> None:
         """Take the list of mutations of the genes saved in self.mutation_list, and
@@ -36,4 +36,9 @@ class Run:
         At index 0, the list contains the name of the gene.
         """
         for i,gene_mutation_block in enumerate(self.mutation_list):
-            self.genes.append(Gene(gene_mutation_block))
+            self.genes.append(Gene(gene_mutation_block,self.args.out_path))
+            
+    def create_isoforms(self) -> None:
+        with DatabaseParser(self.parameters["DB_LOCATION"]) as db_parser:
+            for gene in self.genes:
+                gene.load_isoforms(db_parser)

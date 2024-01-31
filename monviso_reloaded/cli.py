@@ -14,6 +14,7 @@ def main(argv=None) -> None:  # pragma no cover
     run.load_input(argv)
     run.load_mutation_list()
     run.create_genes()
+    run.create_isoforms()
 
 def init() -> None:
     if __name__ == "__main__":
