@@ -1,9 +1,11 @@
+# flake8: noqa
 import logging
-import shutil
 import os
+import shutil
+import subprocess
 import time
 from pathlib import Path
-import subprocess
+
 from Bio import SeqIO
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
@@ -62,6 +64,7 @@ def run_cobalt(gene: str, cobalt_home: str) -> bool:
             f"No hits file found or file is empty for gene: {gene}"
         )
         return False
+
 
 def make_isof_folders(gene_path, iso: str) -> Path:
     """

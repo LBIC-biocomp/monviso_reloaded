@@ -1,13 +1,12 @@
 import argparse
-import logging
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Dict, List
+
 
 class InputParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_arguments()
-
 
     def add_arguments(self) -> None:
         """Add a list of expected arguments to the Parser instance.
@@ -40,7 +39,8 @@ class InputParser(argparse.ArgumentParser):
         super().add_argument(
             "-db",
             "--db_home",
-            help="path to the DBs containing the canonical and isoform sequences",
+            help="path to the DBs containing the\
+                canonical and isoform sequences",
             type=str,
             required=False,
         )
@@ -110,7 +110,8 @@ class InputParser(argparse.ArgumentParser):
         parameters_group.add_argument(
             "-rc",
             "--res_cutoff",
-            help="maximum number of not crystalised residues accepted before cutting a model",
+            help="maximum number of not crystalised residues\
+                accepted before cutting a model",
             type=int,
             default=5,
             required=False,
@@ -125,37 +126,39 @@ class InputParser(argparse.ArgumentParser):
             not args.db_home or not args.cobalt_home or not args.hmmer_home
         ):
             raise TypeError(
-                "Specify a parameters file or insert the paths to the DBs, COBALT and HMMER manually"
+                "Specify a parameters file or insert the paths\
+                    to the DBs, COBALT and HMMER manually"
             )
         elif args.par_file and (
             args.db_home or args.cobalt_home or args.hmmer_home
         ):
             raise TypeError(
-                "Either specify a parameters file or insert parameters manually"
+                "Either specify a parameters file or\
+                    insert parameters manually"
             )
 
     def parse_input(self, mutation_file_path: argparse.Namespace) -> List:
         """Parse the list of mutations and genes from the mutation_list file.
 
-        :param mutation_list: path to the file containing the list of mutations and genes
+        :param mutation_list: path to the file containing the list
+        of mutations and genes
         :return: The list of gene and mutations
         """
         with Path(mutation_file_path).open() as my_file:
             content = my_file.read()
 
         blocks = [block.splitlines() for block in content.split("\n\n")]
-        protein_list = []
-  
-
         return blocks
 
-
-    def get_parameters(self,
+    def get_parameters(
+        self,
         parameters_path: argparse.Namespace = "parameters.dat",
     ) -> Dict:
         """Collect the parameters from the parameters file if provided.
 
-        :param parameters_path: Path to the parameters file, defaults to "parameters.dat"
+        :param parameters_path: Path to the parameters file,
+        defaults to "parameters.dat".
+
         :return: Dict of keywords with the associated parameters
         """
         keywords = {
@@ -172,7 +175,8 @@ class InputParser(argparse.ArgumentParser):
         keys = list(keywords)
         if not Path(parameters_path).exists():
 
-            error_message = f"Parameters file not found in {parameters_path}, please check the path provided."
+            error_message = f"Parameters file not found in {parameters_path},\
+                please check the path provided."
             raise TypeError(error_message)
 
         with Path(parameters_path).open() as my_file:
@@ -181,11 +185,11 @@ class InputParser(argparse.ArgumentParser):
         for key in keys:
             for line in lines:
                 if key in line:
-                    value = line[line.find("=") + 1 :].strip()
+                    value = line[line.find("=") + 1:].strip()
                     keywords[key] = value
         return keywords
-    
-    def merge_parameters(self,args: argparse.Namespace) -> Dict:
+
+    def merge_parameters(self, args: argparse.Namespace) -> Dict:
         """Make the parameters dictionary if they are passed as arguments
 
         :param args: passed arguments
@@ -201,8 +205,10 @@ class InputParser(argparse.ArgumentParser):
             "NUM_OF_MOD_WT": args.max_model_wt,
             "NUM_OF_MOD_MUT": args.max_model_mut,
         }
-        
-    def print_parameters(self,args: argparse.Namespace, parameters: Dict) -> None:
+
+    def print_parameters(
+        self, args: argparse.Namespace, parameters: Dict
+    ) -> None:
         """Print the parameters provided
 
         :param parameters: Provided parameters
@@ -220,12 +226,10 @@ class InputParser(argparse.ArgumentParser):
             f"COBALT: {parameters['COBALT_HOME']}\n"
             f"HMMER: {parameters['HMMER_HOME']}"
         )
-        
+
         print(param)
 
-
-
-    def load_input(self,argv) -> (argparse.Namespace, Dict):
+    def load_input(self, argv) -> (argparse.Namespace, Dict):
         """Load user input from the command line and parameters file.
 
         :param argv: command line arguments
@@ -237,9 +241,5 @@ class InputParser(argparse.ArgumentParser):
         else:
             parameters = self.merge_parameters(args)
         self.print_parameters(args, parameters)
-        
-        return (args,parameters)
 
-
-
-
+        return (args, parameters)
