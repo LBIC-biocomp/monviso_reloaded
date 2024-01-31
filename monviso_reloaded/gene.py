@@ -73,20 +73,29 @@ class Isoform:
             fh.write_file(Path(self.out_path,self.isoform_name,self.isoform_name+".fasta"),text_output)
             
     def blastp_search(self) -> None:
+        """Use the isoform.fasta file saved in the directory
+           to start a Blastp search. If the file already exists,
+           nothing is done.
+        """
         print(f"Looking for homologues of {self.gene_name} {self.isoform_name}")
         file_path=Path(self.out_path,self.isoform_name,self.isoform_name+".fasta")
-        fasta_file= SeqIO.read(
-                file_path, "fasta"
-                )
         
-        results = blastq.qblast("blastp", "swissprot", fasta_file.seq, alignments=500, word_size=6)
-        blastRecord = blastparser.read(results)
-        text_output=">"+fasta_file.id+"\n"+str(fasta_file.seq).strip() +"\n"
-        for alignment in blastRecord.alignments:
-            for hsp in alignment.hsps:
-                text_output+=f">{alignment.hit_id}\n"
-                text_output+=str(hsp.sbjct).replace("-", "") + "\n\n"
         with FileHandler() as fh:
-            fh.write_file(str(file_path).replace(".fasta","_hits.fasta"),text_output)
+            if fh.check_existence(file_path):
+                print(f"Blastp search output file already present in folder.")
+                
+            else:
+                fasta_file= SeqIO.read(
+                            file_path, "fasta"
+                            )
+        
+                results = blastq.qblast("blastp", "swissprot", fasta_file.seq, alignments=500, word_size=6)
+                blastRecord = blastparser.read(results)
+                text_output=">"+fasta_file.id+"\n"+str(fasta_file.seq).strip() +"\n"
+                for alignment in blastRecord.alignments:
+                    for hsp in alignment.hsps:
+                        text_output+=f">{alignment.hit_id}\n"
+                        text_output+=str(hsp.sbjct).replace("-", "") + "\n\n"
+                fh.write_file(str(file_path).replace(".fasta","_hits.fasta"),text_output)
         print("Done")
     

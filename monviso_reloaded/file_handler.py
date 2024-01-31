@@ -63,3 +63,17 @@ class FileHandler:
             print(f"Content written to {file_path} successfully.")
         except Exception as e:
             print(f"Error writing to file {file_path}: {e}")
+
+    def check_existence(self, path: Union[str, Path]) -> bool:
+        """
+        Checks whether a given file or directory exists.
+
+        Args:
+            path (Union[str, Path]): The path of the file or directory to check.
+        
+        Returns:
+            bool: True if the file or directory exists, False otherwise.
+        """
+        # Convert Path to string if it's not already a string
+        path_str = str(path)
+        return os.path.exists(path_str)
