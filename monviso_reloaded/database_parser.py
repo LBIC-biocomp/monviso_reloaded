@@ -56,19 +56,13 @@ class DatabaseParser:
         :param gene_name: Name of the gene
         :return: List of multi-line gene sequences
         """
-        gene_name = f"GN={str(gene_name.upper())} "
-        counter = 0
-        output = []
-        while counter < len(self.canonical_db):
-            if gene_name in str(
-                self.canonical_db[counter][0]
-            ) and "Homo" in str(self.canonical_db[counter][0]):
-                output.append(self.canonical_db[counter])
-            counter += 1
+        gene_name = f"GN={str(gene_name.upper())}"
+        species = "OS=Homo sapiens"
+        output = [seq for seq in self.canonical_db if gene_name in seq[0] and species in seq[0]]
         if len(output) == 0:
             print(
-                f" No sequences found for gene {gene_name} in\
-                the canonical isoforms database."
+                f"No sequences found for gene {gene_name} in\
+the canonical isoforms database."
             )
         return output
 
@@ -79,18 +73,12 @@ class DatabaseParser:
         :param gene_name: Name of the gene
         :return: List of multi-line gene sequences
         """
-        gene_name = f"GN={str(gene_name.upper())} "
-        counter = 0
-        output = []
-        while counter < len(self.isoforms_db):
-            if gene_name in str(
-                self.isoforms_db[counter][0]
-            ) and "Homo" in str(self.isoforms_db[counter][0]):
-                output.append(self.isoforms_db[counter])
-            counter += 1
+        gene_name = f"GN={str(gene_name.upper())}"
+        species = "OS=Homo sapiens"
+        output = [seq for seq in self.isoforms_db if gene_name in seq[0] and species in seq[0]]
         if len(output) == 0:
             print(
-                f" No sequences found for gene {gene_name} in \
-                the split variants isoforms database."
+                f"No sequences found for gene {gene_name} in \
+the split variants isoforms database."
             )
         return output
