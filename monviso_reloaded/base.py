@@ -44,6 +44,15 @@ class Run:
             self.genes.append(Gene(gene_mutation_block, self.args.out_path))
 
     def create_isoforms(self) -> None:
+        """Loads isoforms for each gene in the 'genes' attribute from
+        the Uniprot database.
+        """
         with DatabaseParser(self.parameters["DB_LOCATION"]) as db_parser:
             for gene in self.genes:
                 gene.load_isoforms(db_parser)
+                
+    def blastp(self) -> None:
+            for gene in self.genes:
+                for isoform in gene.isoforms:
+                    isoform.blastp_search()
+        

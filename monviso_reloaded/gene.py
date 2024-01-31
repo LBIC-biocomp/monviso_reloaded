@@ -1,5 +1,9 @@
 from pathlib import Path
 from typing import Union
+from Bio.Blast import NCBIWWW as blastq
+from Bio.Blast import NCBIXML as blastparser
+from Bio import SeqIO
+
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
@@ -64,7 +68,25 @@ class Isoform:
 
     def save_fasta_sequence(self) -> None:
         
-        text_output="\n".join([self.first_line]+self.sequence)
+        text_output="\n".join([">"+self.first_line]+self.sequence)
         with FileHandler() as fh:
-            fh.write_file(Path(self.out_path,self.isoform_name,self.isoform_name+".fasta"),text_output)      
+            fh.write_file(Path(self.out_path,self.isoform_name,self.isoform_name+".fasta"),text_output)
+            
+    def blastp_search(self) -> None:
+        print(f"Looking for homologues of {self.gene_name} {self.isoform_name}")
+        file_path=Path(self.out_path,self.isoform_name,self.isoform_name+".fasta")
+        fasta_file= SeqIO.read(
+                file_path, "fasta"
+                )
+        
+        results = blastq.qblast("blastp", "swissprot", fasta_file.seq, alignments=500, word_size=6)
+        blastRecord = blastparser.read(results)
+        text_output=">"+fasta_file.id+"\n"+str(fasta_file.seq).strip() +"\n"
+        for alignment in blastRecord.alignments:
+            for hsp in alignment.hsps:
+                text_output+=f">{alignment.hit_id}\n"
+                text_output+=str(hsp.sbjct).replace("-", "") + "\n\n"
+        with FileHandler() as fh:
+            fh.write_file(str(file_path).replace(".fasta","_hits.fasta"),text_output)
+        print("Done")
     
