@@ -51,8 +51,15 @@ class Run:
             for gene in self.genes:
                 gene.load_isoforms(db_parser)
                 
-    def blastp(self) -> None:
+    def run_blastp(self) -> None:
             for gene in self.genes:
                 for isoform in gene.isoforms:
                     isoform.blastp_search()
+    
+    def run_cobalt(self) -> None:
+            for gene in self.genes:
+                for isoform in gene.isoforms:
+                    isoform.create_MSA(cobalt_home=self.parameters["COBALT_HOME"])
+    
+    
         

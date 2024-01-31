@@ -7,6 +7,7 @@ from Bio import SeqIO
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
+from .cobalt_wrapper import Cobalt
 
 
 class Gene:
@@ -99,3 +100,8 @@ class Isoform:
                 fh.write_file(str(file_path).replace(".fasta","_hits.fasta"),text_output)
         print("Done")
     
+    def create_MSA(self,cobalt_home: Union[str,Path]) -> None :
+        with Cobalt() as cobalt:
+            hits_path=Path(self.out_path,self.isoform_name,self.isoform_name+"_hits.fasta")
+            aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
+            cobalt.run(hits_path,aligned_path,cobalt_home)

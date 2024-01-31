@@ -17,7 +17,8 @@ def main(argv=None) -> None:  # pragma no cover
     run.load_mutation_list()
     run.create_genes()
     run.create_isoforms()
-    run.blastp()
+    run.run_blastp()
+    run.run_cobalt()
 
 
 def init() -> None:
