@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Union
+import subprocess
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
 from Bio import SeqIO
@@ -101,7 +102,36 @@ class Isoform:
         print("Done")
     
     def create_MSA(self,cobalt_home: Union[str,Path]) -> None :
-        with Cobalt() as cobalt:
-            hits_path=Path(self.out_path,self.isoform_name,self.isoform_name+"_hits.fasta")
-            aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
-            cobalt.run(hits_path,aligned_path,cobalt_home)
+        """Take the blastp results saved in the _hits.fasta file and use them
+        as query for cobalt, if the MSA are not already present in the isoform
+        folder.
+
+        Args:
+            cobalt_home (Union[str,Path]): Home of the Cobalt program, where executables are stored.
+        """
+        hits_path=Path(self.out_path,self.isoform_name,self.isoform_name+"_hits.fasta")
+        aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
+        with FileHandler() as fh:
+            if fh.check_existence(aligned_path):
+                print("Cobalt output file already present in folder.")
+            else:
+                with Cobalt() as cobalt:
+                    cobalt.run(hits_path,aligned_path,cobalt_home)
+            
+    def HMMsearch(self,hmmer_home: Union[str,Path]) -> None:
+        """Take the aligned cobalt output from the aligned.fast file
+        and use it as query for a hmmsearch.
+
+        Args:
+            hmmer_home (Union[str,Path]): Home of the HMMer program, where executables are stored.
+        """
+        print(f"Building HMM for gene {self.gene_name} {self.isoform_name}")
+        output_path=Path(self.out_path,self.isoform_name,self.isoform_name+".hmm")
+        aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
+        with FileHandler() as fh:
+            if fh.check_existence(output_path):
+                print("HMMsearch output file already present in folder.")
+            else:
+                command = f"{hmmer_home}hmmbuild {output_path} {aligned_path}"
+                subprocess.run(command, shell=True, universal_newlines=True, check=True)
+        print("Done")

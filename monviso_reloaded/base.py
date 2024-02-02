@@ -52,14 +52,29 @@ class Run:
                 gene.load_isoforms(db_parser)
                 
     def run_blastp(self) -> None:
-            for gene in self.genes:
-                for isoform in gene.isoforms:
-                    isoform.blastp_search()
+        """Start a blastp query for every loaded isoform. The proper
+        function is a method of the class Isoform. This is used to 
+        split the whole in smaller steps. 
+        """
+        for gene in self.genes:
+            for isoform in gene.isoforms:
+                isoform.blastp_search()
     
     def run_cobalt(self) -> None:
-            for gene in self.genes:
-                for isoform in gene.isoforms:
-                    isoform.create_MSA(cobalt_home=self.parameters["COBALT_HOME"])
+        """Start a cobalt run for every loaded isoform. The proper
+        function is a method of the class Isoform. This is used to 
+        split the whole in smaller steps. 
+        """
+        for gene in self.genes:
+            for isoform in gene.isoforms:
+                isoform.create_MSA(cobalt_home=self.parameters["COBALT_HOME"])
     
-    
-        
+    def run_hmmsearch(self)-> None:
+        """Start a hmmsearch for every loaded isoform. The proper
+        function is a method of the class Isoform. This is used to 
+        split the whole in smaller steps. 
+        """
+        for gene in self.genes:
+            for isoform in gene.isoforms:
+                isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"])
+

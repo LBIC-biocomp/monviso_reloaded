@@ -19,6 +19,7 @@ def main(argv=None) -> None:  # pragma no cover
     run.create_isoforms()
     run.run_blastp()
     run.run_cobalt()
+    run.run_hmmsearch()
 
 
 def init() -> None:
