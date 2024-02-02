@@ -4,7 +4,6 @@ import subprocess
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
 from Bio import SeqIO
-import requests
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
@@ -154,7 +153,7 @@ class Isoform:
                 raise(FileNotFoundError(".hmm file not found."))
             
             print(f"Looking for templates for {self.gene_name} {self.isoform_name}")
-            templates_path=Path(self.out_path,self.gene_name,self.isoform_name,"possible_templates.xml")
+            templates_path=Path(self.out_path,self.isoform_name,"possible_templates.xml")
             
             command = f"curl -L -H 'Expect:' -H 'Accept:text/xml' -F seqdb=pdb -F\
                 seq='<{str(hmm_path)}' https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
