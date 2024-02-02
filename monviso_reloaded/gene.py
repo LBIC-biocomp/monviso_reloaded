@@ -4,7 +4,7 @@ import subprocess
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
 from Bio import SeqIO
-
+import requests
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
@@ -118,12 +118,15 @@ class Isoform:
                 with Cobalt() as cobalt:
                     cobalt.run(hits_path,aligned_path,cobalt_home)
             
-    def HMMsearch(self,hmmer_home: Union[str,Path]) -> None:
+    def buildHMM(self,hmmer_home: Union[str,Path]) -> Union[str,Path]:
         """Take the aligned cobalt output from the aligned.fast file
-        and use it as query for a hmmsearch.
+        and use it as query for  hmmbuild.
 
         Args:
             hmmer_home (Union[str,Path]): Home of the HMMer program, where executables are stored.
+            
+        Returns:
+            output_path (Union[str,Path]): Path to .hmm file
         """
         print(f"Building HMM for gene {self.gene_name} {self.isoform_name}")
         output_path=Path(self.out_path,self.isoform_name,self.isoform_name+".hmm")
@@ -131,7 +134,34 @@ class Isoform:
         with FileHandler() as fh:
             if fh.check_existence(output_path):
                 print("HMMsearch output file already present in folder.")
+                return output_path
             else:
                 command = f"{hmmer_home}hmmbuild {output_path} {aligned_path}"
                 subprocess.run(command, shell=True, universal_newlines=True, check=True)
+                return output_path
         print("Done")
+
+    def HMMsearch(self,hmmer_home: Union[str,Path]) -> None:
+        """Take the aligned cobalt output from the aligned.fast file, build .hmm file,
+        and use it as query for a hmmsearch.
+
+        Args:
+            hmmer_home (Union[str,Path]): Home of the HMMer program, where executables are stored.
+        """
+        with FileHandler() as fh:
+            hmm_path=self.buildHMM(hmmer_home=hmmer_home)
+            if not fh.check_existence(hmm_path):
+                raise(FileNotFoundError(".hmm file not found."))
+            
+            print(f"Looking for templates for {self.gene_name} {self.isoform_name}")
+            templates_path=Path(self.out_path,self.gene_name,self.isoform_name,"possible_templates.xml")
+            
+            command = f"curl -L -H 'Expect:' -H 'Accept:text/xml' -F seqdb=pdb -F\
+                seq='<{str(hmm_path)}' https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
+            try:
+                
+                result = subprocess.run(command, shell=True, universal_newlines=True, capture_output=True, check=True)
+                output = result.stdout  # Captured output as a string
+                fh.write_file(templates_path,output)
+            except subprocess.CalledProcessError as e:
+                print(f"Error executing curl command: {e}")

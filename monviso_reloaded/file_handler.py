@@ -77,3 +77,22 @@ class FileHandler:
         # Convert Path to string if it's not already a string
         path_str = str(path)
         return os.path.exists(path_str)
+    
+    def read_file(self, path: Union[str, Path]) -> str:
+        """
+        Read and return the content of a file after checking its existence.
+
+        Args:
+            path (Union[str, Path]): The path of the file or directory to check.
+        
+        Returns:
+            str: The file content.
+        """
+        if not self.check_existence(path):
+            raise(FileNotFoundError("The specified file was not found."))
+        
+        else:
+            path=Path(path)
+            with path.open('r') as file:
+                content = file.read()
+                return content
