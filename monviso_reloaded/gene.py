@@ -204,7 +204,7 @@ class Isoform:
                 
             with PDB_manager() as pm:
                 for pdb in templates_list:
-                    if not fh.check_existence(templates_directory,pdb,".pdb"):
+                    if not fh.check_existence(Path(templates_directory,pdb[:4]+".pdb")):
                         file=pm.downloadPDB(pdb[:4],self.out_path.parent.parent)
                         fh.copy_file(file,templates_directory)
 
