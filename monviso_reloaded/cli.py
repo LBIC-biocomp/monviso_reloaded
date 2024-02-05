@@ -20,6 +20,7 @@ def main(argv=None) -> None:  # pragma no cover
     run.run_blastp()
     run.run_cobalt()
     run.run_hmmsearch()
+    run.run_pdb_selection()
 
 
 def init() -> None:

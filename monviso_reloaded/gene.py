@@ -4,10 +4,12 @@ import subprocess
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
 from Bio import SeqIO
+from time import sleep
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
 from .cobalt_wrapper import Cobalt
+from .PDB_manager import PDB_manager
 
 
 class Gene:
@@ -55,7 +57,7 @@ class Isoform:
         self.isoform_name="isoform"+str(self.isoform_index)
         self.first_line=sequence[0]
         self.sequence=sequence[1:]
-        self.out_path=out_path
+        self.out_path=Path(out_path,self.isoform_name)
         self.create_directory()
         self.save_fasta_sequence()
         
@@ -65,13 +67,13 @@ class Isoform:
         the gene folder."""
 
         with FileHandler() as fh:
-            fh.create_directory(Path(self.out_path,self.isoform_name))
+            fh.create_directory(Path(self.out_path))
 
     def save_fasta_sequence(self) -> None:
         
         text_output="\n".join([">"+self.first_line]+self.sequence)
         with FileHandler() as fh:
-            fh.write_file(Path(self.out_path,self.isoform_name,self.isoform_name+".fasta"),text_output)
+            fh.write_file(Path(self.out_path,self.isoform_name+".fasta"),text_output)
             
     def blastp_search(self) -> None:
         """Use the isoform.fasta file saved in the directory
@@ -79,17 +81,18 @@ class Isoform:
            nothing is done.
         """
         print(f"Looking for homologues of {self.gene_name} {self.isoform_name}")
-        file_path=Path(self.out_path,self.isoform_name,self.isoform_name+".fasta")
+        file_path=Path(self.out_path,self.isoform_name+".fasta")
+        out_path=Path(self.out_path,self.isoform_name+"_hits.fasta")
         
         with FileHandler() as fh:
-            if fh.check_existence(file_path):
+            if fh.check_existence(out_path):
                 print(f"Blastp search output file already present in folder.")
                 
             else:
                 fasta_file= SeqIO.read(
                             file_path, "fasta"
                             )
-        
+
                 results = blastq.qblast("blastp", "swissprot", fasta_file.seq, alignments=500, word_size=6)
                 blastRecord = blastparser.read(results)
                 text_output=">"+fasta_file.id+"\n"+str(fasta_file.seq).strip() +"\n"
@@ -108,8 +111,8 @@ class Isoform:
         Args:
             cobalt_home (Union[str,Path]): Home of the Cobalt program, where executables are stored.
         """
-        hits_path=Path(self.out_path,self.isoform_name,self.isoform_name+"_hits.fasta")
-        aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
+        hits_path=Path(self.out_path,self.isoform_name+"_hits.fasta")
+        aligned_path=Path(self.out_path,"aligned.fasta")
         with FileHandler() as fh:
             if fh.check_existence(aligned_path):
                 print("Cobalt output file already present in folder.")
@@ -128,8 +131,8 @@ class Isoform:
             output_path (Union[str,Path]): Path to .hmm file
         """
         print(f"Building HMM for gene {self.gene_name} {self.isoform_name}")
-        output_path=Path(self.out_path,self.isoform_name,self.isoform_name+".hmm")
-        aligned_path=Path(self.out_path,self.isoform_name,"aligned.fasta")
+        output_path=Path(self.out_path,self.isoform_name+".hmm")
+        aligned_path=Path(self.out_path,"aligned.fasta")
         with FileHandler() as fh:
             if fh.check_existence(output_path):
                 print("HMMsearch output file already present in folder.")
@@ -153,14 +156,61 @@ class Isoform:
                 raise(FileNotFoundError(".hmm file not found."))
             
             print(f"Looking for templates for {self.gene_name} {self.isoform_name}")
-            templates_path=Path(self.out_path,self.isoform_name,"possible_templates.xml")
+            templates_path=Path(self.out_path,"possible_templates.xml")
             
-            command = f"curl -L -H 'Expect:' -H 'Accept:text/xml' -F seqdb=pdb -F\
-                seq='<{str(hmm_path)}' https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
-            try:
+            if not fh.check_existence(templates_path):
+                command = f"curl -L -H 'Expect:' -H 'Accept:text/xml' -F seqdb=pdb -F\
+                    seq='<{str(hmm_path)}' https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
+                try:
+                    
+                    result = subprocess.run(command, shell=True, universal_newlines=True, capture_output=True, check=True)
+                    output = result.stdout  # Captured output as a string
+                    fh.write_file(templates_path,output)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error executing curl command: {e}")
+            else:
+                print(f"Templates file for {self.gene_name} {self.isoform_name} esists.\
+                    Skipping hmmsearch.")
                 
-                result = subprocess.run(command, shell=True, universal_newlines=True, capture_output=True, check=True)
-                output = result.stdout  # Captured output as a string
-                fh.write_file(templates_path,output)
-            except subprocess.CalledProcessError as e:
-                print(f"Error executing curl command: {e}")
+    def extract_pdb_names(self, max_pdb: int) -> list :
+        """Extact PDB names from the hmmsearch file found in the isoform directory,
+        with the name possible templates.xml.
+
+        Args:
+            max_pdb: The maximum number of PDB templates to use to model the isoform.
+
+        Returns:
+            pdb_list (list(str)): A list of the PDBids and chains that can be used
+            for the modeling.
+        """
+        with FileHandler() as fh:
+            pdb_list_path= Path(self.out_path,"all_pdbs.dat")
+            top_templates_path=Path(self.out_path,"top_templates.dat")
+            templates_path=Path(self.out_path,"possible_templates.xml")
+            if not (fh.check_existence(pdb_list_path) and fh.check_existence(top_templates_path)):
+                templates_content=fh.read_file(templates_path).splitlines()
+                pdb_list=[line[16:22] for line in templates_content if "hits name" in line ]
+                templates_list=pdb_list[:max_pdb]
+                fh.write_file(top_templates_path,"\n".join(templates_list))
+                fh.write_file(pdb_list_path,"\n".join(pdb_list))
+            templates_list=fh.read_file(top_templates_path).splitlines()
+            return templates_list
+        
+    def get_pdb_file(self,templates_list: str) -> None:
+        templates_directory=Path(self.out_path,"Templates")
+        with FileHandler() as fh:
+            if not fh.check_existence(templates_directory):
+                fh.create_directory(templates_directory)
+                
+            with PDB_manager() as pm:
+                for pdb in templates_list:
+                    if not fh.check_existence(templates_directory,pdb,".pdb"):
+                        file=pm.downloadPDB(pdb[:4],self.out_path.parent.parent)
+                        fh.copy_file(file,templates_directory)
+
+                
+                
+    def select_pdb(self,max_pdb:int) -> None :
+        templates_list=self.extract_pdb_names(max_pdb)
+        self.get_pdb_file(templates_list)
+       

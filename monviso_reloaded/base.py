@@ -77,4 +77,9 @@ class Run:
         for gene in self.genes:
             for isoform in gene.isoforms:
                 isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"])
+                
+    def run_pdb_selection(self) -> None:
+        for gene in self.genes:
+            for isoform in gene.isoforms:
+                isoform.select_pdb(int(self.parameters["PDB_TO_USE"]))
 

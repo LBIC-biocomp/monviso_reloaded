@@ -46,6 +46,18 @@ class FileHandler:
             print(f"The file {src} does not exist.")
         except Exception as e:
             print(f"Error moving file from {src} to {dest}: {e}")
+            
+    def copy_file(self, src: Union[str, Path], dest: Union[str, Path]):
+        """Copies a file from src to dest."""
+        src = str(src)
+        dest = str(dest)
+        try:
+            shutil.copy(src, dest)
+            print(f"File copied from {src} to {dest}.")
+        except FileNotFoundError:
+            print(f"The file {src} does not exist.")
+        except Exception as e:
+            print(f"Error copying file from {src} to {dest}: {e}")
 
     def write_file(self, file_path: Union[str, Path], content: str):
         """Writes content to a file, removing it first if it exists."""

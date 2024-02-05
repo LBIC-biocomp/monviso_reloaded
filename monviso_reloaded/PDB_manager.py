@@ -13,22 +13,26 @@ class PDB_manager:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
     
-    def downloadPDB(self, pdb: str,out_path: Union[str,Path])-> None:
+    def downloadPDB(self, pdb: str,out_path: Union[str,Path])-> Path:
         right_pdbname = f'{pdb}.pdb'
         wrong_pdbname = f"pdb{pdb}.ent"
+        download_dir=".pdbdownloads"
         
+        filepath=Path(out_path,download_dir,right_pdbname)
         with FileHandler() as fh:
-            fh.create_directory(Path(out_path,"PDB_downloads"))
+            if not fh.check_existence(Path(out_path,download_dir)):
+                fh.create_directory(Path(out_path,download_dir))
             
-            if fh.check_existence(Path(out_path,"PDB_downloads",right_pdbname)):
-                pass
+            if fh.check_existence(filepath):
+                return filepath
             else:
                 pdbl = PDBList()
-                filename = pdbl.retrieve_pdb_file(pdb, pdir=str(Path(out_path,"PDB_downloads")),
+                filename = pdbl.retrieve_pdb_file(pdb, pdir=str(Path(out_path,download_dir)),
                                                   file_format="pdb", overwrite=True)
                 
                 if fh.check_existence(filename):
-                    fh.move_file(Path(out_path,"PDB_downloads",wrong_pdbname),Path(out_path,"PDB_downloads",right_pdbname))
-        
+                    fh.move_file(Path(out_path,download_dir,wrong_pdbname),filepath)
+                    return filepath
                 else:
                     raise(FileNotFoundError(f"Could not download PDB {pdb}"))
+            
