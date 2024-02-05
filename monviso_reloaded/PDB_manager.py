@@ -2,6 +2,23 @@ from Bio.PDB import PDBList
 from .file_handler import FileHandler
 from typing import Union
 from pathlib import Path
+from Bio.PDB import PDBParser, PDBIO, Select
+
+class ChainSelection(Select):
+    def __init__(self, chain_letters, standard_atoms=True):
+        self.chain_letters = chain_letters.upper()
+        self.standard_atoms = standard_atoms
+
+    def accept_chain(self, chain):
+        # Filter the chain
+        return chain.id == self.chain_letters
+
+    def accept_atom(self, atom):
+        # Filter for standard atoms if requested
+        if self.standard_atoms:
+            return True
+        return False
+
 
 class PDB_manager:
     def __init__(self):
@@ -35,4 +52,18 @@ class PDB_manager:
                     return filepath
                 else:
                     raise(FileNotFoundError(f"Could not download PDB {pdb}"))
-            
+    
+    def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str):
+        """Take an input path, save the standard atoms of chain 'chain_letter' in
+        a filtered new PDB file.
+
+        Args:
+            input_pdb_path (Union[Path,str]): The original PDB file path to be filtered
+            output_pdb_path (Union[Path,str]): The path of the output PDB
+            chain_letter (str): Letter of the chain to extract.
+        """
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure("structure", str(input_pdb_path))
+        io = PDBIO()
+        io.set_structure(structure)
+        io.save(str(output_pdb_path), ChainSelection(chain_letter))
