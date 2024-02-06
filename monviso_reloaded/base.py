@@ -81,5 +81,5 @@ class Run:
     def run_pdb_selection(self) -> None:
         for gene in self.genes:
             for isoform in gene.isoforms:
-                isoform.select_pdb(int(self.parameters["PDB_TO_USE"]))
+                isoform.select_pdb(int(self.parameters["PDB_TO_USE"]),float(self.parameters["RESOLUTION"]))
 

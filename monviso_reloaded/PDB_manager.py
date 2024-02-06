@@ -53,9 +53,9 @@ class PDB_manager:
                 else:
                     raise(FileNotFoundError(f"Could not download PDB {pdb}"))
     
-    def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str):
+    def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str,resolution: float):
         """Take an input path, save the standard atoms of chain 'chain_letter' in
-        a filtered new PDB file.
+        a filtered new PDB file, if resolution is better than the parameter 'resolution'.
 
         Args:
             input_pdb_path (Union[Path,str]): The original PDB file path to be filtered
@@ -64,6 +64,9 @@ class PDB_manager:
         """
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("structure", str(input_pdb_path))
-        io = PDBIO()
-        io.set_structure(structure)
-        io.save(str(output_pdb_path), ChainSelection(chain_letter))
+        if structure.header["resolution"] <= resolution:
+            io = PDBIO()
+            io.set_structure(structure)
+            io.save(str(output_pdb_path), ChainSelection(chain_letter))
+        else:
+            print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")

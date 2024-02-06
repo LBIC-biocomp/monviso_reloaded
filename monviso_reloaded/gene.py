@@ -203,7 +203,7 @@ class Isoform:
         Args:
             templates_list (str): list of pdbs that could be used for modelling
         """
-        templates_directory=Path(self.out_path,"Templates")
+        templates_directory=Path(self.out_path,"templates")
         with FileHandler() as fh:
             if not fh.check_existence(templates_directory):
                 fh.create_directory(templates_directory)
@@ -215,19 +215,19 @@ class Isoform:
                         fh.copy_file(file,templates_directory)
 
     
-    def get_clean_pdb_chain(self,templates_list: list) -> None:
-        templates_directory=Path(self.out_path,"Templates")
+    def get_clean_pdb_chain(self,templates_list: list,resolution: float) -> None:
+        templates_directory=Path(self.out_path,"templates")
         with PDB_manager() as pm:
             for pdb in templates_list:
                 pdb_name=pdb[:4]
                 chain=pdb[-1]
                 original_pdb_path=Path(templates_directory,pdb_name+".pdb")
                 filtered_pdb_path=Path(templates_directory,pdb+"_clean.pdb")
-                pm.extract_clean_chain(original_pdb_path,filtered_pdb_path,chain)
+                pm.extract_clean_chain(original_pdb_path,filtered_pdb_path,chain,resolution)
 
             
                 
-    def select_pdb(self,max_pdb:int) -> None :
+    def select_pdb(self,max_pdb:int,resolution: float) -> None :
         """Take care of the template selection.
         Execute the following steps:
         1. Extract pdb names from the hmmsearch output
@@ -239,5 +239,5 @@ class Isoform:
         """
         templates_list=self.extract_pdb_names(max_pdb)
         self.get_pdb_file(templates_list)
-        self.get_clean_pdb_chain(templates_list)
+        self.get_clean_pdb_chain(templates_list,resolution)
        
