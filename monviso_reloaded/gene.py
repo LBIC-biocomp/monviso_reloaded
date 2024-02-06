@@ -10,7 +10,7 @@ from .database_parser import DatabaseParser
 from .file_handler import FileHandler
 from .cobalt_wrapper import Cobalt
 from .PDB_manager import PDB_manager
-
+from .template import Template
 
 class Gene:
     def __init__(self, gene_mutation_block: list[list], out_path: str):
@@ -60,6 +60,7 @@ class Isoform:
         self.out_path=Path(out_path,self.isoform_name)
         self.create_directory()
         self.save_fasta_sequence()
+        self.templates=[]
         
     def create_directory(self) -> None:
         """Create an empty subdirectory with the isoform index
@@ -172,7 +173,7 @@ class Isoform:
                 print(f"Templates file for {self.gene_name} {self.isoform_name} esists.\
                     Skipping hmmsearch.")
                 
-    def extract_pdb_names(self, max_pdb: int) -> list :
+    def _extract_pdb_names(self, max_pdb: int) -> list :
         """Extact PDB names from the hmmsearch file found in the isoform directory,
         with the name possible templates.xml.
 
@@ -196,48 +197,19 @@ class Isoform:
             templates_list=fh.read_file(top_templates_path).splitlines()
             return templates_list
         
-    def get_pdb_file(self,templates_list: str) -> None:
-        """Create the template directory for the PDB files if does not exist.
-        Download the PDB files that could be used as templates.
+        
+    def load_templates(self,max_pdb:int,resolution_cutoff: float):
+        """Load a list of N (=max_pdb) PDB ids to use as templates.
+        Create a Template object for each of the pdb files. Append
+        the new object to self.templates.
 
         Args:
-            templates_list (str): list of pdbs that could be used for modelling
+            max_pdb (int): Maximum number of PDB templates to use.
+            resolution_cutoff (float): Accept CryoEM and Xray structures within
+            this resolution cut-off.
         """
-        templates_directory=Path(self.out_path,"templates")
-        with FileHandler() as fh:
-            if not fh.check_existence(templates_directory):
-                fh.create_directory(templates_directory)
-                
-            with PDB_manager() as pm:
-                for pdb in templates_list:
-                    if not fh.check_existence(Path(templates_directory,pdb[:4]+".pdb")):
-                        file=pm.downloadPDB(pdb[:4],self.out_path.parent.parent)
-                        fh.copy_file(file,templates_directory)
-
-    
-    def get_clean_pdb_chain(self,templates_list: list,resolution: float) -> None:
-        templates_directory=Path(self.out_path,"templates")
-        with PDB_manager() as pm:
-            for pdb in templates_list:
-                pdb_name=pdb[:4]
-                chain=pdb[-1]
-                original_pdb_path=Path(templates_directory,pdb_name+".pdb")
-                filtered_pdb_path=Path(templates_directory,pdb+"_clean.pdb")
-                pm.extract_clean_chain(original_pdb_path,filtered_pdb_path,chain,resolution)
-
-            
-                
-    def select_pdb(self,max_pdb:int,resolution: float) -> None :
-        """Take care of the template selection.
-        Execute the following steps:
-        1. Extract pdb names from the hmmsearch output
-        2. Download the pdb files
-        3. ...
-
-        Args:
-            max_pdb (int): _description_
-        """
-        templates_list=self.extract_pdb_names(max_pdb)
-        self.get_pdb_file(templates_list)
-        self.get_clean_pdb_chain(templates_list,resolution)
+        templates_list=self._extract_pdb_names(max_pdb)
+        for pdb in templates_list:
+            self.templates.append(Template(pdb, self.out_path,self.gene_name,self.isoform_name,resolution_cutoff))
+        
        

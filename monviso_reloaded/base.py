@@ -78,8 +78,8 @@ class Run:
             for isoform in gene.isoforms:
                 isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"])
                 
-    def run_pdb_selection(self) -> None:
+    def load_templates(self) -> None:
         for gene in self.genes:
             for isoform in gene.isoforms:
-                isoform.select_pdb(int(self.parameters["PDB_TO_USE"]),float(self.parameters["RESOLUTION"]))
+                isoform.load_templates(int(self.parameters["PDB_TO_USE"]),float(self.parameters["RESOLUTION"]))
 

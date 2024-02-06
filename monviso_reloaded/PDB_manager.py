@@ -53,7 +53,7 @@ class PDB_manager:
                 else:
                     raise(FileNotFoundError(f"Could not download PDB {pdb}"))
     
-    def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str,resolution: float):
+    def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str,resolution_cutoff: float):
         """Take an input path, save the standard atoms of chain 'chain_letter' in
         a filtered new PDB file, if resolution is better than the parameter 'resolution'.
 
@@ -61,12 +61,17 @@ class PDB_manager:
             input_pdb_path (Union[Path,str]): The original PDB file path to be filtered
             output_pdb_path (Union[Path,str]): The path of the output PDB
             chain_letter (str): Letter of the chain to extract.
+        
+        Returns:
+            resolution (float or None): The resolution of the X-Ray or CryoEM structure
         """
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("structure", str(input_pdb_path))
-        if structure.header["resolution"] <= resolution:
+        if structure.header["resolution"] <= resolution_cutoff:
             io = PDBIO()
             io.set_structure(structure)
             io.save(str(output_pdb_path), ChainSelection(chain_letter))
+            return structure.header["resolution"] 
         else:
             print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
+            return None
