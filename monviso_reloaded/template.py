@@ -26,12 +26,16 @@ class Template:
         self.isoform_name=isoform_name
         self.templates_directory=Path(self.out_path,"templates")
         self.pdb_filename=Path(self.templates_directory,self.pdb_name+".pdb")
-        self.clean_pdb_filename=Path(self.templates_directory,pdb_name+".pdb")
+        self.clean_pdb_filename=Path(self.templates_directory,pdb_name+"_clean.pdb")
+        self.clean_fasta_file=Path(self.templates_directory,pdb_name+".fasta")
         self.resolution_cutoff=resolution_cutoff
         self.resolution=9999  #Overwritten with Xray and CryoEM resolution
+        self.sequence=''
         
         self.get_pdb_file()
         self.get_clean_pdb_chain()
+        if self.usable:
+            self.get_fasta()
         
     def get_pdb_file(self) -> None:
         """Create the template directory for the PDB files if does not exist.
@@ -52,3 +56,9 @@ class Template:
     def get_clean_pdb_chain(self) -> None:
         with PDB_manager() as pm:
             self.resolution=pm.extract_clean_chain(self.pdb_filename,self.clean_pdb_filename,self.pdb_chain, self.resolution_cutoff)
+            if self.resolution>self.resolution_cutoff:
+                self.usable=False
+    def get_fasta(self) -> None:
+        with PDB_manager() as pm:
+            self.sequence=pm.extract_fasta(self.pdb_name, self.clean_pdb_filename, self.clean_fasta_file)
+            

@@ -2,12 +2,23 @@ from Bio.PDB import PDBList
 from .file_handler import FileHandler
 from typing import Union
 from pathlib import Path
-from Bio.PDB import PDBParser, PDBIO, Select
+from Bio.PDB import PDBParser, PDBIO, Select, Selection
+from Bio.PDB.Polypeptide import three_to_index,index_to_one
 
 class ChainSelection(Select):
     def __init__(self, chain_letters, standard_atoms=True):
         self.chain_letters = chain_letters.upper()
         self.standard_atoms = standard_atoms
+        self.standard_residues = [
+            "ALA", "ARG", "ASN", "ASP", "CYS",
+            "GLU", "GLN", "GLY", "HIS", "ILE",
+            "LEU", "LYS", "MET", "PHE", "PRO",
+            "SER", "THR", "TRP", "TYR", "VAL"
+        ]
+        
+    def accept_residue(self, residue):        
+        # Accept only residues that are in the list of standard amino acids
+        return residue.resname.strip() in self.standard_residues
 
     def accept_chain(self, chain):
         # Filter the chain
@@ -74,4 +85,28 @@ class PDB_manager:
             return structure.header["resolution"] 
         else:
             print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
-            return None
+            return 9999
+        
+    def extract_fasta(self,pdb_name: str, pdb_path: Union[str,Path],output_fasta_path: Union[str,Path]) -> None:
+        """Load a PDB file and return the fasta sequence as a string.
+
+        Args:
+            pdb_name: Name of the PDB file and chain letter
+            pdb_path (Union[str,Path]): Path to the PDB structure.
+            output_fasta_path (Union[str,Path]): Path where to save the fasta sequence.
+        """
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure("structure", str(pdb_path))
+        io=PDBIO()
+        io.set_structure(structure)
+        
+
+        residues=Selection.unfold_entities(structure, 'R')
+        resnames=[x.get_resname() for x in residues]
+        sequence=''.join([index_to_one(three_to_index(resname)) for resname in resnames])
+        with FileHandler() as fh:
+            content=">"+pdb_name+"\n"
+            content+=sequence
+            content+="\n"
+            fh.write_file(output_fasta_path,content)
+        return sequence
