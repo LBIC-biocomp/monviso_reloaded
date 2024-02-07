@@ -9,6 +9,7 @@ class Gene:
     def __init__(self, gene_mutation_block: list[list], out_path: str):
         self.name = gene_mutation_block[0].upper()
         self.mutations = self._standardize_mutations(gene_mutation_block[1:])
+        self.mappable_mutations=[]
         self.out_path = Path(out_path, self.name)
         self.create_directory()
         self.sequences = []
@@ -48,7 +49,17 @@ class Gene:
             sequence_string="".join("".join(sequence[1:]).splitlines()) 
             for mutation in self.mutations:
                 if self._check_presence_mutated_residue(sequence_string,mutation):
+                    # The mutation can be mapped, append it to the list.
+                    # The list will be passed to the Isoform object.
                     modellable_mutations.append(mutation)
+                    
+                    # Take note of the mutations that can be mapped on
+                    # at least on isoform. This will be necessary to 
+                    # calculate the score of the mutation function.
+                    # See doi: 10.3389/fchem.2022.1059593
+                    
+                    if mutation not in self.mappable_mutations:
+                        self.mappable_mutations.append(mutation)
                     
             # Check if no mutations can be mapped. Skip isoform.
             if len(modellable_mutations)==0:
@@ -129,4 +140,8 @@ class Gene:
         return standard_mutation_list
             
             
+    def select_isoforms(self) -> None:
+        for isoform in self.isoforms:
+            isoform.calculate_mutation_score(self.mappable_mutations)
+            isoform.calculate_structural_score()
             

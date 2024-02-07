@@ -83,3 +83,6 @@ class Run:
             for isoform in gene.isoforms:
                 isoform.load_templates(int(self.parameters["PDB_TO_USE"]),float(self.parameters["RESOLUTION"]),self.parameters["COBALT_HOME"])
 
+    def select_isoforms(self) -> None:
+        for gene in self.genes:
+            gene.select_isoforms()

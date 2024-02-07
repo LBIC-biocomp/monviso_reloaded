@@ -16,6 +16,8 @@ class Isoform:
         self.isoform_index=isoform_index
         self.isoform_name="isoform"+str(self.isoform_index)
         self.mutations=mutations
+        self.mutation_score=0 #just for initialization
+        self.structural_score=0 #just for initialization
         self.first_line=sequence[0]
         self.sequence=sequence[1:]
         self.out_path=Path(out_path,self.isoform_name)
@@ -200,3 +202,44 @@ class Isoform:
         self._template_alignment(cobalt_home)
         
        
+    def calculate_mutation_score(self,mappable_mutations: list) -> None:
+        """Calculate and save as local attribute the score of the mutation
+           function. Calculated as: mutations that can me mapped on the isoform
+           divided by the number of mutations that can be mapped on at least one
+           isoform of the gene. 
+
+        Args:
+            mappable_mutations (list): The list of mutations that can be mapped
+                                       on at least one isoform of the gene. 
+        """
+        
+        score=len(self.mutations)/len(mappable_mutations)
+        self.mutation_score=score
+
+    def calculate_structural_score(self) -> None:
+        
+        aligned_templates_path=Path(self.out_path,"templates_aligned.fasta")
+        with FileHandler() as fh:
+            alignment=fh.read_file(aligned_templates_path).split(">")
+            
+            total_number_residues = 0 # to increase when reading alignment
+            modellable_residues= 0 # to be increase when reaading alignment
+            
+            
+            target_sequence="".join(alignment[1].splitlines()[1:])
+            templates_alignment=[]
+            for aligned_template in alignment[2:]:
+                template_sequence="".join(aligned_template.splitlines()[1:])
+                templates_alignment.append(template_sequence)
+                
+
+            for residue_index,residue in enumerate(target_sequence):
+                if residue!="-":
+                    total_number_residues+=1
+                    if sum([template[residue_index]!="-" for template in templates_alignment])>0:
+                        modellable_residues+=1
+                        
+            
+            score=modellable_residues/total_number_residues
+            self.structural_score=score
+            

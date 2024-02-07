@@ -21,6 +21,7 @@ def main(argv=None) -> None:  # pragma no cover
     run.run_cobalt()
     run.run_hmmsearch()
     run.load_templates()
+    run.select_isoforms()
 
 
 def init() -> None:
