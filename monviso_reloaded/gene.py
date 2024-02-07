@@ -52,7 +52,7 @@ class Gene:
                     
             # Check if no mutations can be mapped. Skip isoform.
             if len(modellable_mutations)==0:
-                print(f"None of the mutations can be mapped on {self.gene_name} isoform_{isoform_index}")
+                print(f"None of the mutations can be mapped on {self.name} isoform_{isoform_index}")
             
             else:
                 self.isoforms.append(Isoform(self.name,sequence,isoform_index,self.out_path,modellable_mutations))
