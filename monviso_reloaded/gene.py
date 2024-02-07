@@ -3,8 +3,8 @@ from typing import Union
 import subprocess
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
+from Bio.PDB.Polypeptide import three_to_index,index_to_one
 from Bio import SeqIO
-from time import sleep
 
 from .database_parser import DatabaseParser
 from .file_handler import FileHandler
@@ -15,9 +15,9 @@ from .template import Template
 class Gene:
     def __init__(self, gene_mutation_block: list[list], out_path: str):
         self.name = gene_mutation_block[0].upper()
-        self.mutations = gene_mutation_block[1:]
+        self.mutations = self._standardize_mutations(gene_mutation_block[1:])
+        print (self.mutations)
         self.out_path = Path(out_path, self.name)
-        print(self.out_path.absolute())
         self.create_directory()
         self.sequences = []
         self.isoforms=[]
@@ -48,7 +48,64 @@ class Gene:
         self.load_sequences(db_parser)
         for isoform_index,sequence in enumerate(self.sequences):
             self.isoforms.append(Isoform(self.name,sequence,isoform_index,self.out_path))
+    
+    def _standardize_mutations(self,mutation_list) -> list:
+        """Remove white spaces from mutations. Change residue names to one-letter format.
+        Args:
+            mutation_list (list): list of mutations as obtained from the input file.
 
+        Returns:
+            standard_mutation_list (list): standardized list of mutations.
+        """
+        standard_mutation_list=[]
+        standard_residues = [
+            "ALA", "ARG", "ASN", "ASP", "CYS",
+            "GLU", "GLN", "GLY", "HIS", "ILE",
+            "LEU", "LYS", "MET", "PHE", "PRO",
+            "SER", "THR", "TRP", "TYR", "VAL"
+        ]
+        
+        for i, mutation in enumerate(mutation_list):
+            mutation=''.join(mutation.split()) #remove whitespaces
+            
+            first_resname=[]
+            number=[]
+            
+            letter_index=0
+            while mutation[letter_index].isalpha():
+                first_resname.append(mutation[letter_index])
+                letter_index+=1
+            
+            while mutation[letter_index].isnumeric():
+                number.append(mutation[letter_index])
+                letter_index+=1
+            
+            second_resname=mutation[letter_index:]
+            
+            # Apply checks on resiude names
+            first_resname="".join(first_resname).upper()
+            second_resname="".join(second_resname).upper()
+            
+            if (len(first_resname)==len(second_resname)):
+                if len(first_resname)==3:
+                    if (first_resname in standard_residues) and (second_resname in standard_residues):
+                        first_resname=index_to_one(three_to_index(first_resname))
+                        second_resname=index_to_one(three_to_index(second_resname))
+                    else:
+                        raise(ValueError(f"Residue names in {mutation} do not appear to be standard."))
+                else:
+                    if len(first_resname)!=1:
+                         raise(ValueError(f"Residue names in {mutation} must be in one-letter or three-letter format."))  
+                    
+            else:
+                raise(ValueError(f"Different residue name format in mutation {mutation}."))
+            
+            standard_mutation_list.append(["".join(first_resname)+","+"".join(number)+","+"".join(second_resname)])
+    
+        return standard_mutation_list
+            
+            
+            
 
 class Isoform:
     def __init__(self,gene_name:str,sequence: list[str],isoform_index: int,out_path: Union[str,Path]):
@@ -197,8 +254,29 @@ class Isoform:
             templates_list=fh.read_file(top_templates_path).splitlines()
             return templates_list
         
+    def _template_alignment(self,cobalt_home: Union[str,Path]) -> None:
+        """Create a unique file with the templates sequences and run a cobalt MSA.
+        Args:
+            cobalt_home (Union[str,Path]): Home of the Cobalt program, where executables are stored.
+        """
+        content=">"+self.gene_name+" "+self.isoform_name+"\n"
+        content+="".join(self.sequence)+"\n"
+        for template in self.templates:
+            content+=">"+template.pdb_name+"_"+template.pdb_chain+"\n"
+            content+=template.sequence+"\n"
+            
+        with FileHandler() as fh:
+            templates_path=Path(self.out_path,"templates_sequences.fasta")
+            fh.write_file(templates_path,content)
+            aligned_path=Path(self.out_path,"templates_aligned.fasta")
+            if fh.check_existence(aligned_path):
+                print("Cobalt output file for templates already present in folder.")
+            else:
+                with Cobalt() as cobalt:
+                    cobalt.run(templates_path,aligned_path,cobalt_home)
+                    print(f"Cobalt alignment for {self.gene_name} {self.isoform_name} templates done.")
         
-    def load_templates(self,max_pdb:int,resolution_cutoff: float):
+    def load_templates(self,max_pdb:int,resolution_cutoff: float,cobalt_home: Union[str,Path]):
         """Load a list of N (=max_pdb) PDB ids to use as templates.
         Create a Template object for each of the pdb files. Append
         the new object to self.templates.
@@ -207,9 +285,14 @@ class Isoform:
             max_pdb (int): Maximum number of PDB templates to use.
             resolution_cutoff (float): Accept CryoEM and Xray structures within
             this resolution cut-off.
+            cobalt_home (Union[str,Path]): Home of the Cobalt program, where executables are stored.
         """
         templates_list=self._extract_pdb_names(max_pdb)
         for pdb in templates_list:
-            self.templates.append(Template(pdb, self.out_path,self.gene_name,self.isoform_name,resolution_cutoff))
+            template=Template(pdb, self.out_path,self.gene_name,self.isoform_name,resolution_cutoff)
+            if template.usable:
+                self.templates.append(template)
+                
+        self._template_alignment(cobalt_home)
         
        
