@@ -140,8 +140,8 @@ class Gene:
         return standard_mutation_list
             
             
-    def select_isoforms(self) -> None:
+    def select_isoforms(self,w1: float,w2: float) -> None:
         for isoform in self.isoforms:
             isoform.calculate_mutation_score(self.mappable_mutations)
             isoform.calculate_structural_score()
-            
+            isoform.calculate_selection_score(w1,w2)

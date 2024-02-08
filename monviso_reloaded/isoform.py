@@ -18,6 +18,7 @@ class Isoform:
         self.mutations=mutations
         self.mutation_score=0 #just for initialization
         self.structural_score=0 #just for initialization
+        self.selection_score=0 #just for initialization
         self.first_line=sequence[0]
         self.sequence=sequence[1:]
         self.out_path=Path(out_path,self.isoform_name)
@@ -242,4 +243,15 @@ class Isoform:
             
             score=modellable_residues/total_number_residues
             self.structural_score=score
-            
+    
+    def calculate_selection_score(self,w1:float=10.0,w2:float=10.0) -> None:
+        """Calculate and save the selection score as attribute.
+        The score is calculated with:
+        score= w1*structural_score + w2*mutation_score
+
+        Args:
+            w1 (float): weight of the structural score
+            w2 (float): weight of the mutation score
+        """
+        
+        self.structural_score=w1*self.structural_score+w2*self.mutation_score

@@ -85,4 +85,4 @@ class Run:
 
     def select_isoforms(self) -> None:
         for gene in self.genes:
-            gene.select_isoforms()
+            gene.select_isoforms(float(self.parameters["W1"]),float(self.parameters["W2"]))
