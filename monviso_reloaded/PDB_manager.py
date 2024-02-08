@@ -79,10 +79,12 @@ class PDB_manager:
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("structure", str(input_pdb_path))
         if structure.header["resolution"] <= resolution_cutoff:
-            io = PDBIO()
-            io.set_structure(structure)
-            io.save(str(output_pdb_path), ChainSelection(chain_letter))
-            return structure.header["resolution"] 
+            with FileHandler() as fh:
+                io = PDBIO()
+                io.set_structure(structure)
+                if not fh.check_existence(output_pdb_path):
+                    io.save(str(output_pdb_path), ChainSelection(chain_letter))
+                return structure.header["resolution"] 
         else:
             print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
             return 9999
@@ -95,18 +97,22 @@ class PDB_manager:
             pdb_path (Union[str,Path]): Path to the PDB structure.
             output_fasta_path (Union[str,Path]): Path where to save the fasta sequence.
         """
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure("structure", str(pdb_path))
-        io=PDBIO()
-        io.set_structure(structure)
-        
-
-        residues=Selection.unfold_entities(structure, 'R')
-        resnames=[x.get_resname() for x in residues]
-        sequence=''.join([index_to_one(three_to_index(resname)) for resname in resnames])
         with FileHandler() as fh:
+            parser = PDBParser(QUIET=True)
+            structure = parser.get_structure("structure", str(pdb_path))
+            io=PDBIO()
+            io.set_structure(structure)
+            
+
+            residues=Selection.unfold_entities(structure, 'R')
+            resnames=[x.get_resname() for x in residues]
+            sequence=''.join([index_to_one(three_to_index(resname)) for resname in resnames])
             content=">"+pdb_name+"\n"
             content+=sequence
             content+="\n"
-            fh.write_file(output_fasta_path,content)
-        return sequence
+            #This next check could be moved at the beginning
+            #and if .fasta file already exists, it should
+            #be loaded
+            if not fh.check_existence: 
+                fh.write_file(output_fasta_path,content)
+            return sequence

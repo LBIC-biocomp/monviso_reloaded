@@ -112,8 +112,26 @@ class InputParser(argparse.ArgumentParser):
             "--res_cutoff",
             help="maximum number of not crystalised residues\
                 accepted before cutting a model",
-            type=int,
-            default=5,
+            type=float,
+            default=5.0,
+            required=False,
+        )
+        
+        parameters_group.add_argument(
+            "-ws",
+            "--w_struct",
+            help="weight of the structural function",
+            type=float,
+            default=10.0,
+            required=False,
+        )
+        
+        parameters_group.add_argument(
+            "-wm",
+            "--w_mut",
+            help="weight of the mutation function",
+            type=float,
+            default=10.0,
             required=False,
         )
 
@@ -171,6 +189,8 @@ class InputParser(argparse.ArgumentParser):
             "MODEL_CUTOFF": None,
             "NUM_OF_MOD_WT": None,
             "NUM_OF_MOD_MUT": None,
+            "W_STRUCT": None,
+            "W_MUT": None,
         }
         keys = list(keywords)
         if not Path(parameters_path).exists():
@@ -204,6 +224,9 @@ class InputParser(argparse.ArgumentParser):
             "MODEL_CUTOFF": args.res_cutoff,
             "NUM_OF_MOD_WT": args.max_model_wt,
             "NUM_OF_MOD_MUT": args.max_model_mut,
+            "W_STRUCT": args.w_struct,
+            "W_MUT": args.w_mut
+            
         }
 
     def print_parameters(

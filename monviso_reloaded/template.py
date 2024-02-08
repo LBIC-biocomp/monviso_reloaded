@@ -31,6 +31,8 @@ class Template:
         self.resolution_cutoff=resolution_cutoff
         self.resolution=9999  #Overwritten with Xray and CryoEM resolution
         self.sequence=''
+        self.aligned_sequence=''
+        self.sequence_identity=0
         
         self.get_pdb_file()
         self.get_clean_pdb_chain()
@@ -54,11 +56,49 @@ class Template:
                     fh.copy_file(file,self.templates_directory)
                     
     def get_clean_pdb_chain(self) -> None:
+        """Take the original PDB file in the template directory,
+        extract the standard atoms from the single chain of interest,
+        save it as a new file.
+        """
         with PDB_manager() as pm:
             self.resolution=pm.extract_clean_chain(self.pdb_filename,self.clean_pdb_filename,self.pdb_chain, self.resolution_cutoff)
             if self.resolution>self.resolution_cutoff:
                 self.usable=False
+   
     def get_fasta(self) -> None:
+        """Load the clean PDB file of the chain of interest and extract the fasta
+        sequence. Save it as an attribute.
+        """
         with PDB_manager() as pm:
             self.sequence=pm.extract_fasta(self.pdb_name, self.clean_pdb_filename, self.clean_fasta_file)
-            
+   
+    def add_aligned_sequence(self, aligned_sequence: str) -> None:
+        """Method to save as attribute the aligned sequece.
+        Invoked by parent Isoform object, after cobal alignment.
+        """
+        self.aligned_sequence=aligned_sequence
+        
+    def calculate_sequence_identity(self, reference_sequence: str) -> None:
+        
+        #Check if own sequence is loaded
+        if len(self.aligned_sequence)==0:
+            raise(RuntimeError("Aligned sequence of template has length 0. Calculate structural score first."))
+        
+        #Correct the format of parent Isoform object seuqnce attribute
+        reference_sequence="".join("".join(reference_sequence).splitlines())
+        
+        #If sequences are aligned, they should have the same length
+        if len(self.aligned_sequence) != len(reference_sequence):
+            raise(RuntimeError(f"Length of the aligne template and isoform sequence do not match.\n{self.aligned_sequence}\n{reference_sequence}"))
+        
+        reference_sequence_length=len(reference_sequence.replace("-",""))
+        matching_residues=0
+        for residue_index, residue in enumerate(reference_sequence):
+            if residue!="-":
+                if residue==self.aligned_sequence[residue_index]:
+                    matching_residues+=1
+        
+        self.sequence_identity=matching_residues/reference_sequence_length*100
+        print(self.sequence_identity)
+
+        

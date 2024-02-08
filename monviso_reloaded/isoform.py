@@ -21,6 +21,7 @@ class Isoform:
         self.selection_score=0 #just for initialization
         self.first_line=sequence[0]
         self.sequence=sequence[1:]
+        self.aligned_sequence=""
         self.out_path=Path(out_path,self.isoform_name)
         self.create_directory()
         self.save_fasta_sequence()
@@ -227,14 +228,15 @@ class Isoform:
             modellable_residues= 0 # to be increase when reaading alignment
             
             
-            target_sequence="".join(alignment[1].splitlines()[1:])
+            self.aligned_sequence="".join(alignment[1].splitlines()[1:])
             templates_alignment=[]
-            for aligned_template in alignment[2:]:
+            for template_index,aligned_template in enumerate(alignment[2:]):
                 template_sequence="".join(aligned_template.splitlines()[1:])
                 templates_alignment.append(template_sequence)
+                self.templates[template_index].add_aligned_sequence(template_sequence)
                 
 
-            for residue_index,residue in enumerate(target_sequence):
+            for residue_index,residue in enumerate(self.aligned_sequence):
                 if residue!="-":
                     total_number_residues+=1
                     if sum([template[residue_index]!="-" for template in templates_alignment])>0:
