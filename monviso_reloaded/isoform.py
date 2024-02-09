@@ -16,16 +16,21 @@ class Isoform:
         self.isoform_index=isoform_index
         self.isoform_name="isoform"+str(self.isoform_index)
         self.mutations=mutations
-        self.mutation_score=0 #just for initialization
-        self.structural_score=0 #just for initialization
-        self.selection_score=0 #just for initialization
         self.first_line=sequence[0]
         self.sequence=sequence[1:]
-        self.aligned_sequence=""
         self.out_path=Path(out_path,self.isoform_name)
+
+        #just for initialization
+        self.mutation_score=0 
+        self.structural_score=0 
+        self.selection_score=0 
+        self.templates=[]
+        self.modellable= True #False if all templates get excluded
+        self.aligned_sequence=""
+        
         self.create_directory()
         self.save_fasta_sequence()
-        self.templates=[]
+
         
     def create_directory(self) -> None:
         """Create an empty subdirectory with the isoform index
@@ -246,6 +251,27 @@ class Isoform:
             score=modellable_residues/total_number_residues
             self.structural_score=score
     
+    def filter_templates_by_sequence_identity(self,sequence_identity_cutoff:float) -> None:
+        """Take the list of templates and exclude the ones with a sequence identity
+        lower or equal to the cutoff.
+
+        Args:
+            sequence_identity_cutoff (float): cut-off value
+        """
+        filtered_list=[]
+        for template in self.templates:
+            if template.sequence_identity>sequence_identity_cutoff:
+                filtered_list.append(template)
+            else:
+                print(f"{template.sequence_identity} < {sequence_identity_cutoff}")
+                print(f"Template {template.pdb_name} excluded for low sequence identity")
+                
+        if len(filtered_list)==0:
+            print("Resolution and sequence identity cutoff let to an empty list of"+
+                  f" templates for {self.gene_name} {self.isoform_name}")
+            self.modellable=False
+        self.templates=filtered_list
+        
     def calculate_selection_score(self,w1:float=10.0,w2:float=10.0) -> None:
         """Calculate and save the selection score as attribute.
         The score is calculated with:

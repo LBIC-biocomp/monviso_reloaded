@@ -140,11 +140,12 @@ class Gene:
         return standard_mutation_list
             
             
-    def select_isoforms(self,w1: float,w2: float) -> None:
+    def select_isoforms(self,w1: float,w2: float,sequence_identity_cutoff: float) -> None:
         for isoform in self.isoforms:
 
             isoform.calculate_mutation_score(self.mappable_mutations)
             isoform.calculate_structural_score()
             for template in isoform.templates:
                 template.calculate_sequence_identity(isoform.aligned_sequence)
+            isoform.filter_templates_by_sequence_identity(sequence_identity_cutoff)
             isoform.calculate_selection_score(w1,w2)

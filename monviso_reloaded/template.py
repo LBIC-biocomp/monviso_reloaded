@@ -99,6 +99,4 @@ class Template:
                     matching_residues+=1
         
         self.sequence_identity=matching_residues/reference_sequence_length*100
-        print(self.sequence_identity)
-
         
