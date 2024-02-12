@@ -14,6 +14,8 @@ class Gene:
         self.create_directory()
         self.sequences = []
         self.isoforms=[]
+        
+        self.isoforms_to_model=[]
 
     def create_directory(self) -> None:
         """Create an empty directory with the gene name
@@ -138,9 +140,26 @@ class Gene:
             standard_mutation_list.append(["".join(first_resname),"".join(number),"".join(second_resname)])
     
         return standard_mutation_list
+    
+    def _report_on_selected_isoforms(self):
+        """Print on screen a report on the selected isoforms."""
+        
+        print(f"For the gene {self.name} the following models will be created:")
+        for modellable_isoform in self.isoforms_to_model:
+            print(f"{modellable_isoform[0].isoform_name} {"".join(modellable_isoform[1])}")
             
             
     def select_isoforms(self,w1: float,w2: float,sequence_identity_cutoff: float) -> None:
+        """Start the calculation of the scores for all isoforms. The templates of each isoform
+        are filtered, based on the sequence identity. The isoforms that still have templates
+        are ordered by their selection score.
+
+        Args:
+            w1 (float): weight of the structural function
+            w2 (float): weight of the mutation function
+            sequence_identity_cutoff (float): templates with a seq. identity
+                                              lower than this, are excluded.
+        """
         for isoform in self.isoforms:
 
             isoform.calculate_mutation_score(self.mappable_mutations)
@@ -149,3 +168,35 @@ class Gene:
                 template.calculate_sequence_identity(isoform.aligned_sequence)
             isoform.filter_templates_by_sequence_identity(sequence_identity_cutoff)
             isoform.calculate_selection_score(w1,w2)
+        
+        self.isoforms=[isoform for isoform in self.isoforms if isoform.modellable]
+        if len(self.isoforms)==0:
+            print(f"No modellable isoform for gene {self.name}")
+        else:
+            self.isoforms.sort(key= lambda x: x.selection_score)
+            
+            #Add wild type to list of isoforms to model
+            self.isoforms_to_model.append([self.isoforms[0],"WT"])
+            
+            #Take note of mutations to model
+            mutations_to_model=self.mutations
+            
+            # Add mutations of best isoform
+            for mutation in self.isoforms[0].mutations:
+                self.isoforms_to_model.append([self.isoforms[0],mutation])
+                mutations_to_model.remove(mutation)
+            
+            #Try other isoforms to model all mutations
+            #if there are other isoforms to select from
+            if len(self.isoforms)>0:
+                for mutation in mutations_to_model:
+                    check_across_isoforms=[mutation in isoform.mutations for isoform in self.isoforms]
+                    if sum(check_across_isoforms)>0:
+                        isoform_for_mutation=self.isoforms[check_across_isoforms.index(True)]
+                        self.isoforms_to_model.append([isoform_for_mutation,mutation])
+            
+            self._report_on_selected_isoforms()
+                        
+            if len(mutations_to_model)>0:
+                print(f"The following mutations will not be modelled for gene {self.name}")
+                print(mutations_to_model)

@@ -78,13 +78,14 @@ class PDB_manager:
         """
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("structure", str(input_pdb_path))
-        if structure.header["resolution"] <= resolution_cutoff:
-            with FileHandler() as fh:
-                io = PDBIO()
-                io.set_structure(structure)
-                if not fh.check_existence(output_pdb_path):
-                    io.save(str(output_pdb_path), ChainSelection(chain_letter))
-                return structure.header["resolution"] 
+        if structure.header["resolution"]:
+            if structure.header["resolution"] <= resolution_cutoff:
+                with FileHandler() as fh:
+                    io = PDBIO()
+                    io.set_structure(structure)
+                    if not fh.check_existence(output_pdb_path):
+                        io.save(str(output_pdb_path), ChainSelection(chain_letter))
+                    return structure.header["resolution"] 
         else:
             print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
             return 9999
