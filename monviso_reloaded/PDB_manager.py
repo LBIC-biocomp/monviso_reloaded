@@ -16,6 +16,20 @@ class ChainSelection(Select):
             "SER", "THR", "TRP", "TYR", "VAL"
         ]
         
+        self.first_model=True # see accet_model method
+   
+   
+    def accept_model(self, model):
+        # Accept only the first model
+        # The attribute is initialized as True
+        # and turns to False after the first run.
+        
+        if self.first_model:
+            self.first_model = False
+            return True
+        else:
+            return False
+
     def accept_residue(self, residue):        
         # Accept only residues that are in the list of standard amino acids
         return residue.resname.strip() in self.standard_residues
@@ -67,6 +81,7 @@ class PDB_manager:
     def extract_clean_chain(self,input_pdb_path: Union[Path,str],output_pdb_path: Union[Path,str],chain_letter: str,resolution_cutoff: float):
         """Take an input path, save the standard atoms of chain 'chain_letter' in
         a filtered new PDB file, if resolution is better than the parameter 'resolution'.
+        The exception is with the NMR structures that will be included in all cases.
 
         Args:
             input_pdb_path (Union[Path,str]): The original PDB file path to be filtered
@@ -86,7 +101,20 @@ class PDB_manager:
                     if not fh.check_existence(output_pdb_path):
                         io.save(str(output_pdb_path), ChainSelection(chain_letter))
                     return structure.header["resolution"] 
+                
         else:
+            # The content of the following "if" cleans the NMR structures
+            # But it's still missing an estimate of the reolution. Therefore
+            # these structures will be cleaned, and included in all cases..
+            if 'nmr' in structure.header['structure_method']:
+                with FileHandler() as fh:
+                    io = PDBIO()
+                    io.set_structure(structure)
+                    if not fh.check_existence(output_pdb_path):
+                        io.save(str(output_pdb_path), ChainSelection(chain_letter))
+                print(f"NMR structure in path {output_pdb_path}")
+                return 0 
+
             print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
             return 9999
         

@@ -78,18 +78,19 @@ class Template:
         """
         self.aligned_sequence=aligned_sequence
         
-    def calculate_sequence_identity(self, reference_sequence: str) -> None:
         
+    def calculate_sequence_identity(self, reference_sequence: str) -> None:
+
         #Check if own sequence is loaded
         if len(self.aligned_sequence)==0:
-            raise(RuntimeError("Aligned sequence of template has length 0. Calculate structural score first."))
+            raise(RuntimeError(f"Aligned sequence of template {self.pdb_name} has length 0. Calculate structural score first."))
         
         #Correct the format of parent Isoform object seuqnce attribute
         reference_sequence="".join("".join(reference_sequence).splitlines())
         
         #If sequences are aligned, they should have the same length
         if len(self.aligned_sequence) != len(reference_sequence):
-            raise(RuntimeError(f"Length of the aligne template and isoform sequence do not match.\n{self.aligned_sequence}\n{reference_sequence}"))
+            raise(RuntimeError(f"Length of the aligned template and isoform sequence do not match.\n{self.aligned_sequence}\n{reference_sequence}"))
         
         reference_sequence_length=len(reference_sequence.replace("-",""))
         matching_residues=0

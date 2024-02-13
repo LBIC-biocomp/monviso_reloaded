@@ -224,7 +224,11 @@ class Isoform:
         self.mutation_score=score
 
     def calculate_structural_score(self) -> None:
-        
+        """Load the sequence of the templates for the aligned file.
+        Add the aligned sequence as an attribute of the template.
+        Calculate how many residues of the target sequence are covered
+        by at least one template.
+        """
         aligned_templates_path=Path(self.out_path,"templates_aligned.fasta")
         with FileHandler() as fh:
             alignment=fh.read_file(aligned_templates_path).split(">")
@@ -232,13 +236,16 @@ class Isoform:
             total_number_residues = 0 # to increase when reading alignment
             modellable_residues= 0 # to be increase when reaading alignment
             
-            
+            print([t.pdb_name for t in self.templates]) ##DEBUG all template name            
+            print([t.splitlines()[0] for t in alignment[1:]])
             self.aligned_sequence="".join(alignment[1].splitlines()[1:])
+            
+
             templates_alignment=[]
-            for template_index,aligned_template in enumerate(alignment[2:]):
+            for alignment_index,aligned_template in enumerate(alignment[2:]):
                 template_sequence="".join(aligned_template.splitlines()[1:])
                 templates_alignment.append(template_sequence)
-                self.templates[template_index].add_aligned_sequence(template_sequence)
+                self.templates[alignment_index].add_aligned_sequence(template_sequence)
                 
 
             for residue_index,residue in enumerate(self.aligned_sequence):
