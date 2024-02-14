@@ -88,3 +88,12 @@ class Run:
             gene.select_isoforms(float(self.parameters["W_STRUCT"]),
                                  float(self.parameters["W_MUT"]),
                                  float(self.parameters["SEQID"]))
+            
+    def start_modeller(self) -> None:
+        """ Run modeller only for the isoforms to model.
+        The method write_modeller() of the isoform accepts the mutation
+        as argument. 
+        """
+        for gene in self.genes:
+            for isoform,mutation in gene.isoforms_to_model:
+                isoform.write_modeller(mutation)

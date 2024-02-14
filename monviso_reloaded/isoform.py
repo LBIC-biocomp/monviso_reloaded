@@ -9,6 +9,7 @@ from Bio import SeqIO
 from .file_handler import FileHandler
 from .cobalt_wrapper import Cobalt
 from .template import Template
+from .modeller_manager import Modeller_manager
 
 class Isoform:
     def __init__(self,gene_name:str,sequence: list[str],isoform_index: int,out_path: Union[str,Path],mutations: list):
@@ -290,3 +291,7 @@ class Isoform:
         """
         
         self.structural_score=w1*self.structural_score+w2*self.mutation_score
+    
+    def write_modeller(self,mutation):
+        with Modeller_manager(self,mutation) as modeller_manager:
+            modeller_manager.run()

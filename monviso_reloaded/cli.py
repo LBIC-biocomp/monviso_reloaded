@@ -22,6 +22,7 @@ def main(argv=None) -> None:  # pragma no cover
     run.run_hmmsearch()
     run.load_templates()
     run.select_isoforms()
+    run.start_modeller()
 
 
 def init() -> None:
