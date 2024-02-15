@@ -134,6 +134,15 @@ class InputParser(argparse.ArgumentParser):
             default=10.0,
             required=False,
         )
+        
+        parameters_group.add_argument(
+            "-mod",
+            "--modeller_exec",
+            help="path to the modeller executable",
+            type=str,
+            default='mod10.4',
+            required=False,
+        )
 
     def check_arguments(self, args: argparse.Namespace) -> None:
         """Verify that the necessary parameters have been provided
@@ -191,6 +200,7 @@ class InputParser(argparse.ArgumentParser):
             "NUM_OF_MOD_MUT": None,
             "W_STRUCT": None,
             "W_MUT": None,
+            "MODELLER_EXEC": None,
         }
         keys = list(keywords)
         if not Path(parameters_path).exists():
@@ -225,7 +235,8 @@ class InputParser(argparse.ArgumentParser):
             "NUM_OF_MOD_WT": args.max_model_wt,
             "NUM_OF_MOD_MUT": args.max_model_mut,
             "W_STRUCT": args.w_struct,
-            "W_MUT": args.w_mut
+            "W_MUT": args.w_mut,
+            "MODELLER_EXEC": args.modeller_exec
             
         }
 
@@ -247,12 +258,15 @@ class InputParser(argparse.ArgumentParser):
             f"OUTPUT DIRECTORY: {args.out_path}\n"
             f"DATABASES DIRECTORY: {parameters['DB_LOCATION']}\n"
             f"COBALT: {parameters['COBALT_HOME']}\n"
-            f"HMMER: {parameters['HMMER_HOME']}"
+            f"HMMER: {parameters['HMMER_HOME']}\n"
+            f"WEIGHT STRUCTURAL SCORE: {parameters['W_STRUCT']}\n"
+            f"WEIGHT MUTATION SCORE: {parameters['W_MUT']}\n"
+            f"MODELLER EXECUTABLE: {parameters['MODELLER_EXEC']}"
         )
 
         print(param)
 
-    def load_input(self, argv) -> (argparse.Namespace, Dict):
+    def load_input(self, argv) -> tuple:
         """Load user input from the command line and parameters file.
 
         :param argv: command line arguments

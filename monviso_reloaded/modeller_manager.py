@@ -1,11 +1,13 @@
 from pathlib import Path
 from .file_handler import FileHandler
+import subprocess
 
 class Modeller_manager:
-    def __init__(self,isoform,mutation):
+    def __init__(self,isoform,mutation: list,modeller_exec: str):
         self.isoform=isoform
         self.mutation=mutation
         self.sequence_to_model=self.isoform.aligned_sequence[:]
+        self.modeller_exec=modeller_exec
 
     def __enter__(self):
         return self
@@ -13,13 +15,12 @@ class Modeller_manager:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
     
-    def run(self):
+    def write(self):
         
         print(f"Modelling {self.isoform.gene_name} {self.isoform.isoform_name} {self.mutation}")
         if self.mutation!="WT":
             success_mutation=self._mutate_reside(self.mutation)
             if not success_mutation:
-                print(self.sequence_to_model)
                 raise(RuntimeError(f"Could not apply mutation!"))
         self.write_alignment()
         self.write_script()
@@ -27,40 +28,31 @@ class Modeller_manager:
 
 
     def write_script(self):
-        alignment_name="modeller_input_"+"".join(self.mutation)+".dat"
-        output_name="modeller_output_"+"".join(self.mutation)+".dat"
-        script_name="run_modeller_"+"".join(self.mutation)+".py"
+        alignment_name=Path(self.isoform.out_path,"modeller_input_"+"".join(self.mutation)+".dat")
+        output_name=Path(self.isoform.out_path,"modeller_output_"+"".join(self.mutation)+".dat")
+        script_path=Path(self.isoform.out_path,"run_modeller_"+"".join(self.mutation)+".py")
         template_names=[t.pdb_name+"_"+t.pdb_chain+"_clean" for t in self.isoform.templates]
         content="""from modeller import *
 from modeller.automodel import *
 from modeller.scripts import complete_pdb
-from modeller.parallel import *
-import os
 
 log.verbose()
-j=job()
-cores_number = 8
-thread = 0
-while thread < cores_number:
-    j.append(local_slave())
-    thread += 1
 env = environ()
-env.io.atom_files_directory = """+ str(Path(self.isoform.out_path,"templates"))+"""
+env.io.atom_files_directory = \""""+ str(Path(self.isoform.out_path,"templates"))+"""\"
 env.io.hetatm = True
 a = automodel(env,
-    alnfile =\""""+alignment_name+"""\",
+    alnfile =\""""+str(alignment_name)+"""\",
     knowns = ("""+ str(template_names)+"""),
     sequence = \""""+self.isoform.gene_name+"""\",
     assess_methods=(assess.DOPE, assess.GA341))
 a.starting_model= 1
 a.ending_model  = 1
-a.use_parallel_job(j)
 a.make()
 ok_models = filter(lambda x: x['failure'] is None, a.outputs)
 toscore = 'DOPE score'
 ok_models = sorted(ok_models, key=lambda k: k[toscore])
 models = [m for m in ok_models[0:10]]
-myout = open(\""""+output_name+"""\", "w")
+myout = open(\""""+str(output_name)+"""\", "w")
 for m in models:
         myout.write(str(m['name']) + " (DOPE SCORE: %.3f)" % (m[toscore]))
 env.libs.topology.read(file='$(LIB)/top_heav.lib')
@@ -70,7 +62,7 @@ s = selection(mdl)
 s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""+self.isoform.gene_name+"""\", normalize_profile=True, smoothing_window=15)""" 
        
         with FileHandler() as fh:
-            fh.write_file(Path(self.isoform.out_path,script_name),content)
+            fh.write_file(script_path,content)
             
     def _mutate_reside(self,mutation) -> bool:
         """Take a mutation in the format [1 letter amino acid, residue number, 1 lett. amino acid]
@@ -105,14 +97,19 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""+self.isoform.gene_na
         # Start writing the content string to be printed in the file
         content=""
         content+=">P1;"+sequences[0][0]+"\n"
-        content+="sequence:"+sequences[0][0]+"\n"
+        content+="sequence:"+sequences[0][0]+":.:.:.:.::::\n"
         content+=sequences[0][1]+"*\n"
         
         # Add templates
         for template_sequence in sequences[1:]:
             content+=">P1;"+template_sequence[0]+"_clean"+"\n"
-            content+="structureX:"+template_sequence[0]+"_clean"+"\n"
+            content+="structureX:"+template_sequence[0]+"_clean"+":.:.:.:.::::\n"
             content+=template_sequence[1]+"*\n"
             
         with FileHandler() as fh:
             fh.write_file(output_path,content)
+            
+    def run(self) -> None:
+        script_path=Path(self.isoform.out_path,"run_modeller_"+"".join(self.mutation)+".py")
+        command = f"{self.modeller_exec} {str(script_path)}"
+        subprocess.run(command, shell=True, universal_newlines=True, check=True)

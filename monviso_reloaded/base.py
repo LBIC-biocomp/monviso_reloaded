@@ -96,4 +96,4 @@ class Run:
         """
         for gene in self.genes:
             for isoform,mutation in gene.isoforms_to_model:
-                isoform.write_modeller(mutation)
+                isoform.run_modeller(mutation,self.parameters["MODELLER_EXEC"])

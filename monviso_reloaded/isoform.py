@@ -237,8 +237,7 @@ class Isoform:
             total_number_residues = 0 # to increase when reading alignment
             modellable_residues= 0 # to be increase when reaading alignment
             
-            print([t.pdb_name for t in self.templates]) ##DEBUG all template name            
-            print([t.splitlines()[0] for t in alignment[1:]])
+            
             self.aligned_sequence="".join(alignment[1].splitlines()[1:])
             
 
@@ -292,6 +291,7 @@ class Isoform:
         
         self.structural_score=w1*self.structural_score+w2*self.mutation_score
     
-    def write_modeller(self,mutation):
-        with Modeller_manager(self,mutation) as modeller_manager:
+    def run_modeller(self,mutation,modeller_exec:str):
+        with Modeller_manager(self,mutation,modeller_exec) as modeller_manager:
+            modeller_manager.write()
             modeller_manager.run()

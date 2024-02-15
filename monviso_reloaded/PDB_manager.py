@@ -100,6 +100,11 @@ class PDB_manager:
                     io.set_structure(structure)
                     if not fh.check_existence(output_pdb_path):
                         io.save(str(output_pdb_path), ChainSelection(chain_letter))
+                        
+                    #remove HETATM from saved file
+                    saved_file=fh.read_file(output_pdb_path).splitlines()
+                    saved_file="\n".join([line for line in saved_file if "HETATM" not in line])
+                    fh.write_file(output_pdb_path,saved_file)
                     return structure.header["resolution"] 
                 
         else:
@@ -115,8 +120,8 @@ class PDB_manager:
                 print(f"NMR structure in path {output_pdb_path}")
                 return 0 
 
-            print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
-            return 9999
+        print(f"The file {str(input_pdb_path)} was exluded due to poor resolution.")
+        return 9999
         
     def extract_fasta(self,pdb_name: str, pdb_path: Union[str,Path],output_fasta_path: Union[str,Path]) -> None:
         """Load a PDB file and return the fasta sequence as a string.
