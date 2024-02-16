@@ -1,2 +1,8 @@
-site_name: monviso_reloaded
-theme: readthedocs
+site_name: Monviso
+nav:
+    - Home: index.md
+theme:
+    name: readthedocs
+
+plugins:
+    - search
