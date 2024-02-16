@@ -3,7 +3,7 @@ import sys
 from monviso_reloaded.base import Run
 
 
-def main(argv=None) -> None:  # pragma no cover
+def main(argv=None):  # pragma no cover
     """
     Main function
 

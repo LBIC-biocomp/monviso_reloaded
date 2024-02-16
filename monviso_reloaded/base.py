@@ -50,50 +50,58 @@ class Run:
         with DatabaseParser(self.parameters["DB_LOCATION"]) as db_parser:
             for gene in self.genes:
                 gene.load_isoforms(db_parser)
-                
+
     def run_blastp(self) -> None:
         """Start a blastp query for every loaded isoform. The proper
-        function is a method of the class Isoform. This is used to 
-        split the whole in smaller steps. 
+        function is a method of the class Isoform. This is used to
+        split the whole in smaller steps.
         """
         for gene in self.genes:
             for isoform in gene.isoforms:
                 isoform.blastp_search()
-    
+
     def run_cobalt(self) -> None:
         """Start a cobalt run for every loaded isoform. The proper
-        function is a method of the class Isoform. This is used to 
-        split the whole in smaller steps. 
+        function is a method of the class Isoform. This is used to
+        split the whole in smaller steps.
         """
         for gene in self.genes:
             for isoform in gene.isoforms:
                 isoform.create_MSA(cobalt_home=self.parameters["COBALT_HOME"])
-    
-    def run_hmmsearch(self)-> None:
+
+    def run_hmmsearch(self) -> None:
         """Start a hmmsearch for every loaded isoform. The proper
-        function is a method of the class Isoform. This is used to 
-        split the whole in smaller steps. 
+        function is a method of the class Isoform. This is used to
+        split the whole in smaller steps.
         """
         for gene in self.genes:
             for isoform in gene.isoforms:
                 isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"])
-                
+
     def load_templates(self) -> None:
         for gene in self.genes:
             for isoform in gene.isoforms:
-                isoform.load_templates(int(self.parameters["PDB_TO_USE"]),float(self.parameters["RESOLUTION"]),self.parameters["COBALT_HOME"])
+                isoform.load_templates(
+                    int(self.parameters["PDB_TO_USE"]),
+                    float(self.parameters["RESOLUTION"]),
+                    self.parameters["COBALT_HOME"],
+                )
 
     def select_isoforms(self) -> None:
         for gene in self.genes:
-            gene.select_isoforms(float(self.parameters["W_STRUCT"]),
-                                 float(self.parameters["W_MUT"]),
-                                 float(self.parameters["SEQID"]))
-            
+            gene.select_isoforms(
+                float(self.parameters["W_STRUCT"]),
+                float(self.parameters["W_MUT"]),
+                float(self.parameters["SEQID"]),
+            )
+
     def start_modeller(self) -> None:
-        """ Run modeller only for the isoforms to model.
+        """Run modeller only for the isoforms to model.
         The method write_modeller() of the isoform accepts the mutation
-        as argument. 
+        as argument.
         """
         for gene in self.genes:
-            for isoform,mutation in gene.isoforms_to_model:
-                isoform.run_modeller(mutation,self.parameters["MODELLER_EXEC"])
+            for isoform, mutation in gene.isoforms_to_model:
+                isoform.run_modeller(
+                    mutation, self.parameters["MODELLER_EXEC"]
+                )

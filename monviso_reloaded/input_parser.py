@@ -116,7 +116,7 @@ class InputParser(argparse.ArgumentParser):
             default=5.0,
             required=False,
         )
-        
+
         parameters_group.add_argument(
             "-ws",
             "--w_struct",
@@ -125,7 +125,7 @@ class InputParser(argparse.ArgumentParser):
             default=10.0,
             required=False,
         )
-        
+
         parameters_group.add_argument(
             "-wm",
             "--w_mut",
@@ -134,13 +134,13 @@ class InputParser(argparse.ArgumentParser):
             default=10.0,
             required=False,
         )
-        
+
         parameters_group.add_argument(
             "-mod",
             "--modeller_exec",
             help="path to the modeller executable",
             type=str,
-            default='mod10.4',
+            default="mod10.4",
             required=False,
         )
 
@@ -215,7 +215,7 @@ class InputParser(argparse.ArgumentParser):
         for key in keys:
             for line in lines:
                 if key in line:
-                    value = line[line.find("=") + 1:].strip()
+                    value = line[line.find("=") + 1 :].strip()
                     keywords[key] = value
         return keywords
 
@@ -236,8 +236,7 @@ class InputParser(argparse.ArgumentParser):
             "NUM_OF_MOD_MUT": args.max_model_mut,
             "W_STRUCT": args.w_struct,
             "W_MUT": args.w_mut,
-            "MODELLER_EXEC": args.modeller_exec
-            
+            "MODELLER_EXEC": args.modeller_exec,
         }
 
     def print_parameters(

@@ -58,7 +58,11 @@ class DatabaseParser:
         """
         gene_name = f"GN={str(gene_name.upper())}"
         species = "OS=Homo sapiens"
-        output = [seq for seq in self.canonical_db if gene_name in seq[0] and species in seq[0]]
+        output = [
+            seq
+            for seq in self.canonical_db
+            if gene_name in seq[0] and species in seq[0]
+        ]
         if len(output) == 0:
             print(
                 f"No sequences found for gene {gene_name} in\
@@ -75,7 +79,11 @@ the canonical isoforms database."
         """
         gene_name = f"GN={str(gene_name.upper())}"
         species = "OS=Homo sapiens"
-        output = [seq for seq in self.isoforms_db if gene_name in seq[0] and species in seq[0]]
+        output = [
+            seq
+            for seq in self.isoforms_db
+            if gene_name in seq[0] and species in seq[0]
+        ]
         if len(output) == 0:
             print(
                 f"No sequences found for gene {gene_name} in \
