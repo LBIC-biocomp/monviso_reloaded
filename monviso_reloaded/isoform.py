@@ -389,9 +389,9 @@ class Isoform:
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
-    def run_modeller(self, mutation, modeller_exec: str):
+    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int):
         with Modeller_manager(
-            self, mutation, modeller_exec
+            self, mutation, modeller_exec, model_cutoff
         ) as modeller_manager:
             modeller_manager.write()
             modeller_manager.run()

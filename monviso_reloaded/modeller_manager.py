@@ -6,11 +6,12 @@ from .file_handler import FileHandler
 
 
 class Modeller_manager:
-    def __init__(self, isoform, mutation: list, modeller_exec: str):
+    def __init__(self, isoform, mutation: list, modeller_exec: str, model_cutoff: int):
         self.isoform = isoform
         self.mutation = mutation
         self.sequence_to_model = self.isoform.aligned_sequence[:]
         self.modeller_exec = modeller_exec
+        self.model_cutoff = model_cutoff
 
     def __enter__(self):
         return self
@@ -112,7 +113,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         return False
 
     def _add_chain_breaks(self, sequences: list) -> list:
-        """For alignments inw which there is no coverage for 7+
+        """For alignments inw which there is no coverage for self.model_cutoff+
         residues, the section without coverage is replaced by
         chain breaks.
 
@@ -133,8 +134,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         max_non_covered = max([seq.count("-") for seq in aligned_seq])
 
         # Search for non-covered subsequences with lenght between
-        # max_non_covered and 7
-        while max_non_covered >= 7:
+        # max_non_covered and model_cutoff
+        while max_non_covered >= self.model_cutoff:
 
             # check if "-" repeated max_non_covered times
             # is present in all the aligned structures (except target seqence)
