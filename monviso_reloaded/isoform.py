@@ -36,6 +36,8 @@ class Isoform:
         self.templates = []
         self.modellable = True  # False if all templates get excluded
         self.aligned_sequence = ""
+        
+        self.modeller_run=None
 
         self.create_directory()
         self.save_fasta_sequence()
@@ -385,13 +387,13 @@ class Isoform:
             w2 (float): weight of the mutation score
         """
 
-        self.structural_score = (
+        self.selection_score = (
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
     def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int):
-        with Modeller_manager(
-            self, mutation, modeller_exec, model_cutoff
-        ) as modeller_manager:
-            modeller_manager.write()
-            modeller_manager.run()
+        self.modeller_run=Modeller_manager(
+            self, mutation, modeller_exec, model_cutoff)
+        
+        self.modeller_run.write()
+        self.modeller_run.run()

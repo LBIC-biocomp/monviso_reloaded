@@ -285,3 +285,50 @@ class Gene:
                     " modelled for gene " + self.name
                 )
                 print(mutations_to_model)
+
+    def write_report(self):
+        """ For every isoform and modeller run,
+        append their information to a report.md file
+        contained in the gene directory.
+        """
+        
+        content="# LOG FILE\n"
+        content+="- GENE NAME: "+self.name+"\n"
+        content+="- PATH: "+str(self.out_path.absolute())+"\n"
+        content+="- REQUESTED MUTATIONS:\n"
+        
+        for mutation in self.mutations:
+            content+="-- "+"".join(mutation)+"\n"
+
+        content+="- MAPPABLE MUTATIONS:\n"
+        
+        for mutation in self.mappable_mutations:
+            content+="-- "+"".join(mutation)+"\n"
+            
+        content+="- ISOFORM SCORES:\n"
+        
+        for isoform in self.isoforms:
+            content+="-- "+isoform.isoform_name+"\n"
+            content+="--- Mutation:"
+            content+=str(round(isoform.mutation_score,2))+" Structural:"
+            content+=str(round(isoform.structural_score,2))+" Selection:"
+            content+=str(round(isoform.selection_score,2))+"\n"
+            content+="--- Modellable: "+str(isoform.modellable)+"\n"
+            
+        content+="\n## MODELS\n"
+        
+        for isoform in self.isoforms_to_model:
+            #isoform[0] is the object, isoform[1] is the mutation
+            content+="- "+isoform[0].isoform_name+" "+"".join(isoform[1])+"\n"
+            content+="- Templates: "
+            
+            for template in isoform[0].templates:
+                content+=template.pdb_name+"_"+template.pdb_chain+" "
+            
+            content+="\n"
+            
+            content+="\n".join(isoform[0].modeller_run.logged_scores)+"\n\n"
+            
+    
+        with FileHandler() as fh:
+            fh.write_file(Path(self.out_path,"report.md"),content)

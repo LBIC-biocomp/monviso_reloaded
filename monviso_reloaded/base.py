@@ -106,3 +106,7 @@ class Run:
                     mutation, self.parameters["MODELLER_EXEC"],
                     int(self.parameters["MODEL_CUTOFF"])
                 )
+
+    def write_report(self):
+        for gene in self.genes:
+            gene.write_report()
