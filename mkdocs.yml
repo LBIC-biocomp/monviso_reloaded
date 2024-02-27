@@ -1,6 +1,17 @@
 site_name: Monviso
 nav:
     - Home: index.md
+    - Classes:
+      - Run:  run.md
+      - Input Parser: input_parser.md
+      - Database Parser: database_parser.md
+      - Cobalt wrapper: cobalt_wrapper.md
+      - File handler: file_handler.md
+      - Gene: gene.md
+      - Isoform: isoform.md
+      - Template: template.md
+      - PDB manager: pdb_manager.md
+      - Modeller manager: modeller_manager.md
 theme:
     name: readthedocs
 
