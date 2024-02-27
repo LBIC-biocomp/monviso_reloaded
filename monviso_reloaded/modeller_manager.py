@@ -23,8 +23,8 @@ class Modeller_manager:
     def write(self):
 
         print(
-            f"Modelling {self.isoform.gene_name} "
-            f" {self.isoform.isoform_name} {self.mutation}"
+            f"Modelling {self.isoform.gene_name}"
+            f" {self.isoform.isoform_name} "+"".join(self.mutation)
         )
         if self.mutation != "WT":
             success_mutation = self._mutate_reside(self.mutation)

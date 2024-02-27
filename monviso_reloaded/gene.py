@@ -253,7 +253,7 @@ class Gene:
             self.isoforms_to_model.append([self.isoforms[0], "WT"])
 
             # Take note of mutations to model
-            mutations_to_model = self.mutations
+            mutations_to_model = self.mutations[:]
 
             # Add mutations of best isoform
             for mutation in self.isoforms[0].mutations:
@@ -275,15 +275,17 @@ class Gene:
                         self.isoforms_to_model.append(
                             [isoform_for_mutation, mutation]
                         )
-
+                        mutations_to_model.remove(mutation)
             self._report_on_selected_isoforms()
 
+            # Print the mutations with that cannot
+            # be associated to any isoform
             if len(mutations_to_model) > 0:
                 print(
                     "The following mutations will not be"
                     " modelled for gene " + self.name
                 )
-                print(mutations_to_model)
+                print(",".join(["".join(mut) for mut in mutations_to_model]))
 
     def write_report(self):
         """ For every isoform and modeller run,
