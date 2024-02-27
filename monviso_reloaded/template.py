@@ -50,6 +50,7 @@ class Template:
         self.resolution = 9999  # Overwritten with Xray and CryoEM resolution
         self.sequence = ""
         self.aligned_sequence = ""
+        self.clean_aligned_sequence = ""
         self.sequence_identity = 0
 
         self.get_pdb_file()
@@ -105,11 +106,17 @@ class Template:
         Invoked by parent Isoform object, after cobal alignment.
         """
         self.aligned_sequence = aligned_sequence
+        
+    def add_clean_aligned_sequence(self, clean_aligned_sequence: str) -> None:
+        """Method to save as attribute the aligned sequece with chain
+        breaks.
+        """
+        self.clean_aligned_sequence = clean_aligned_sequence
 
     def calculate_sequence_identity(self, reference_sequence: str) -> None:
 
         # Check if own sequence is loaded
-        if len(self.aligned_sequence) == 0:
+        if len(self.clean_aligned_sequence) == 0:
             raise (
                 RuntimeError(
                     f"Aligned sequence of template {self.pdb_name}"
@@ -117,11 +124,9 @@ class Template:
                 )
             )
 
-        # Correct the format of parent Isoform object seuqnce attribute
-        reference_sequence = "".join("".join(reference_sequence).splitlines())
 
         # If sequences are aligned, they should have the same length
-        if len(self.aligned_sequence) != len(reference_sequence):
+        if len(self.clean_aligned_sequence) != len(reference_sequence):
             raise (
                 RuntimeError(
                     "Length of the aligned template and isoform sequence "
@@ -132,11 +137,12 @@ class Template:
                 )
             )
 
+        
         reference_sequence_length = len(reference_sequence.replace("-", ""))
         matching_residues = 0
         for residue_index, residue in enumerate(reference_sequence):
-            if residue != "-":
-                if residue == self.aligned_sequence[residue_index]:
+            if residue != "-" and residue !="/":
+                if residue == self.clean_aligned_sequence[residue_index]:
                     matching_residues += 1
 
         self.sequence_identity = (

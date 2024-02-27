@@ -218,7 +218,8 @@ class Gene:
             )
 
     def select_isoforms(
-        self, w1: float, w2: float, sequence_identity_cutoff: float
+        self, w1: float, w2: float, sequence_identity_cutoff: float,
+        model_cutoff: int
     ) -> None:
         """Start the calculation of the scores for all isoforms. The
         templates of each isoform are filtered, based on the sequence
@@ -234,9 +235,7 @@ class Gene:
         for isoform in self.isoforms:
 
             isoform.calculate_mutation_score(self.mappable_mutations)
-            isoform.calculate_structural_score()
-            for template in isoform.templates:
-                template.calculate_sequence_identity(isoform.aligned_sequence)
+            isoform.calculate_structural_score(model_cutoff)
             isoform.filter_templates_by_sequence_identity(
                 sequence_identity_cutoff
             )

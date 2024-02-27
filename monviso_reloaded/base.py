@@ -93,6 +93,7 @@ class Run:
                 float(self.parameters["W_STRUCT"]),
                 float(self.parameters["W_MUT"]),
                 float(self.parameters["SEQID"]),
+                int(self.parameters["MODEL_CUTOFF"]),
             )
 
     def start_modeller(self) -> None:
