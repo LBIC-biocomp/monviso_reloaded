@@ -247,7 +247,7 @@ class Gene:
         if len(self.isoforms) == 0:
             print(f"No modellable isoform for gene {self.name}")
         else:
-            self.isoforms.sort(key=lambda x: x.selection_score)
+            self.isoforms.sort(key=lambda x: -x.selection_score)
 
             # Add wild type to list of isoforms to model
             self.isoforms_to_model.append([self.isoforms[0], "WT"])
