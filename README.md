@@ -2,6 +2,8 @@
 # Monviso reloaded
 MoNvIso is a comprehensive software tool designed for the analysis and modeling of protein isoforms. It automates the process of identifying canonical and additional isoforms, assessing their modeling propensity, mapping mutations accurately, and building structural models of proteins. By leveraging data from the Uniprot database, MoNvIso facilitates a deeper understanding of protein function and variation.
 
+[Read the documentation here.](https://alisamalb.github.io/monviso_reloaded/)
+
 ## Quick start
 
  - Download uniprot_sprot.fasta and uniprot_sprot_varsplic.fasta from UniProt.
