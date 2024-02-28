@@ -93,6 +93,7 @@ class Run:
                 float(self.parameters["W_STRUCT"]),
                 float(self.parameters["W_MUT"]),
                 float(self.parameters["SEQID"]),
+                int(self.parameters["MODEL_CUTOFF"]),
             )
 
     def start_modeller(self) -> None:
@@ -103,5 +104,10 @@ class Run:
         for gene in self.genes:
             for isoform, mutation in gene.isoforms_to_model:
                 isoform.run_modeller(
-                    mutation, self.parameters["MODELLER_EXEC"]
+                    mutation, self.parameters["MODELLER_EXEC"],
+                    int(self.parameters["MODEL_CUTOFF"])
                 )
+
+    def write_report(self):
+        for gene in self.genes:
+            gene.write_report()

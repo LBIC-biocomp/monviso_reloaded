@@ -36,6 +36,9 @@ class Isoform:
         self.templates = []
         self.modellable = True  # False if all templates get excluded
         self.aligned_sequence = ""
+        self.clean_aligned_sequence=""
+        
+        self.modeller_run=None
 
         self.create_directory()
         self.save_fasta_sequence()
@@ -284,6 +287,69 @@ class Isoform:
                 self.templates.append(template)
 
         self._template_alignment(cobalt_home)
+    
+    def _add_chain_breaks(self, sequences: list, model_cutoff:int) -> list:
+        """For alignments inw which there is no coverage for model_cutoff+
+        residues, the section without coverage is replaced by
+        chain breaks.
+
+        Args:
+            sequences (list): A list of [name, sequence] lists,
+            one for each sequence to be written in the modeller
+            alignment input file.
+
+        Returns:
+            list: Returns the same list, with chain breaks.
+        """
+
+        # Separate protein names and aligned sequences in two objects
+        names = [object[0] for object in sequences]
+        aligned_seq = [object[1] for object in sequences]
+
+        # Calculate worst case number of residues without coverage
+        max_non_covered = max([seq.count("-") for seq in aligned_seq])
+
+        # Search for non-covered subsequences with lenght between
+        # max_non_covered and model_cutoff
+        while max_non_covered >= model_cutoff:
+
+            # check if "-" repeated max_non_covered times
+            # is present in all the aligned structures (except target seqence)
+            check_presence = [
+                "-" * max_non_covered in seq for seq in aligned_seq[1:]
+            ]
+            if sum(check_presence) == (len(aligned_seq) - 1):
+
+                # Find position of the sequence of "-"'s in all
+                # aligned sequences for each position it will
+                # check if the coverage is missing in all the
+                # sequences
+                positions = [
+                    seq.find("-" * max_non_covered) for seq in aligned_seq[1:]
+                ]
+                for pos in positions:
+                    check_position = [
+                        seq[pos : pos + max_non_covered]
+                        == "-" * max_non_covered
+                        for seq in aligned_seq[1:]
+                    ]
+                    if sum(check_position) == (len(aligned_seq) - 1):
+                        # If that is the case, replace that section in
+                        # all sequences (+ target sequences) with a chain
+                        # break ("/").
+                        for i, seq in enumerate(aligned_seq):
+                            aligned_seq[i] = (
+                                seq[:pos] + "/" + seq[pos + max_non_covered :]
+                            )
+
+                        max_non_covered += (
+                            1  # This repeats the check for the current value
+                        )
+            max_non_covered -= 1
+
+        sequences = [[names[i], aligned_seq[i]] for i in range(len(names))]
+        return sequences
+
 
     def calculate_mutation_score(self, mappable_mutations: list) -> None:
         """Calculate and save as local attribute the score
@@ -300,7 +366,7 @@ class Isoform:
         score = len(self.mutations) / len(mappable_mutations)
         self.mutation_score = score
 
-    def calculate_structural_score(self) -> None:
+    def calculate_structural_score(self, model_cutoff: int) -> None:
         """Load the sequence of the templates for the aligned file.
         Add the aligned sequence as an attribute of the template.
         Calculate how many residues of the target sequence are covered
@@ -322,7 +388,25 @@ class Isoform:
                 self.templates[alignment_index].add_aligned_sequence(
                     template_sequence
                 )
+                
+            # This part should be moved, but since the alignment is
+            # loaded, here we calculate the sequence with chain breaks.
+            # I.e., gaps longer than the value model_cutoff are removed.
+            # The clean sequence is saved as Template's attribute to 
+            # Calculate sequence identity of the modellable regions.
+            
+            raw_sequence=[self.aligned_sequence]+templates_alignment
+            #Make it 2D for the way the next method is written
+            raw_sequence=[[None, seq] for seq in raw_sequence]
 
+            clean_sequence=self._add_chain_breaks(raw_sequence,model_cutoff)
+            self.clean_aligned_sequence=clean_sequence[0][1]
+            
+            for template_id,template in enumerate(self.templates):
+                template.add_clean_aligned_sequence(clean_sequence[template_id+1][1])
+            
+            ## End of the section for chain breaks.   
+                
             for residue_index, residue in enumerate(self.aligned_sequence):
                 if residue != "-":
                     total_number_residues += 1
@@ -350,8 +434,10 @@ class Isoform:
         Args:
             sequence_identity_cutoff (float): cut-off value
         """
+                
         filtered_list = []
         for template in self.templates:
+            template.calculate_sequence_identity(self.clean_aligned_sequence)
             if template.sequence_identity > sequence_identity_cutoff:
                 filtered_list.append(template)
             else:
@@ -385,13 +471,13 @@ class Isoform:
             w2 (float): weight of the mutation score
         """
 
-        self.structural_score = (
+        self.selection_score = (
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
-    def run_modeller(self, mutation, modeller_exec: str):
-        with Modeller_manager(
-            self, mutation, modeller_exec
-        ) as modeller_manager:
-            modeller_manager.write()
-            modeller_manager.run()
+    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int):
+        self.modeller_run=Modeller_manager(
+            self, mutation, modeller_exec, model_cutoff)
+        
+        self.modeller_run.write()
+        self.modeller_run.run()

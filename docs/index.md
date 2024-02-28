@@ -26,11 +26,11 @@ Both functions are weighted (default: w1 = w2 = 10), which can be adjusted by th
 In the final step, MoNvIso builds structural models of the identified proteins, including both wild-type (WT) forms and their variants, selected based on the analysis conducted in Step 2. This step is only initiated if experimental structures are not already available, ensuring that only necessary modeling work is performed.
 Getting Started
 
-Dive into the world of protein isoform analysis with MoNvIso by exploring the following sections of our documentation [To be done]:
+Dive into the world of protein isoform analysis with MoNvIso by exploring the following sections of our documentation:
 
- - Installation Guide: Learn how to install MoNvIso on your system.
- - Quick Start Tutorial: Get up and running with your first analysis.
- - Understanding the Workflow: A deeper dive into each step of the MoNvIso workflow.
- - FAQs: Answers to common questions about MoNvIso.
+- [Installation Guide](installation.md): Learn how to install MoNvIso on your system.
+- [Quick Start Tutorial](tutorial.md): Get up and running with your first analysis.
+- Understanding the Workflow: A deeper dive into each step of the MoNvIso workflow.
+- FAQs: Answers to common questions about MoNvIso.
 
 MoNvIso is here to enhance your research with advanced protein isoform analysis and modeling. Whether you're investigating mutations, studying protein functions, or exploring structural variations, MoNvIso provides the tools you need to achieve your objectives with precision and ease.

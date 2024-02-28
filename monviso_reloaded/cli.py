@@ -23,6 +23,7 @@ def main(argv=None):  # pragma no cover
     run.load_templates()
     run.select_isoforms()
     run.start_modeller()
+    run.write_report()
 
 
 def init() -> None:

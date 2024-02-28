@@ -218,7 +218,8 @@ class Gene:
             )
 
     def select_isoforms(
-        self, w1: float, w2: float, sequence_identity_cutoff: float
+        self, w1: float, w2: float, sequence_identity_cutoff: float,
+        model_cutoff: int
     ) -> None:
         """Start the calculation of the scores for all isoforms. The
         templates of each isoform are filtered, based on the sequence
@@ -234,9 +235,7 @@ class Gene:
         for isoform in self.isoforms:
 
             isoform.calculate_mutation_score(self.mappable_mutations)
-            isoform.calculate_structural_score()
-            for template in isoform.templates:
-                template.calculate_sequence_identity(isoform.aligned_sequence)
+            isoform.calculate_structural_score(model_cutoff)
             isoform.filter_templates_by_sequence_identity(
                 sequence_identity_cutoff
             )
@@ -248,13 +247,13 @@ class Gene:
         if len(self.isoforms) == 0:
             print(f"No modellable isoform for gene {self.name}")
         else:
-            self.isoforms.sort(key=lambda x: x.selection_score)
+            self.isoforms.sort(key=lambda x: -x.selection_score)
 
             # Add wild type to list of isoforms to model
             self.isoforms_to_model.append([self.isoforms[0], "WT"])
 
             # Take note of mutations to model
-            mutations_to_model = self.mutations
+            mutations_to_model = self.mutations[:]
 
             # Add mutations of best isoform
             for mutation in self.isoforms[0].mutations:
@@ -276,12 +275,61 @@ class Gene:
                         self.isoforms_to_model.append(
                             [isoform_for_mutation, mutation]
                         )
-
+                        mutations_to_model.remove(mutation)
             self._report_on_selected_isoforms()
 
+            # Print the mutations with that cannot
+            # be associated to any isoform
             if len(mutations_to_model) > 0:
                 print(
                     "The following mutations will not be"
                     " modelled for gene " + self.name
                 )
-                print(mutations_to_model)
+                print(",".join(["".join(mut) for mut in mutations_to_model]))
+
+    def write_report(self):
+        """ For every isoform and modeller run,
+        append their information to a report.md file
+        contained in the gene directory.
+        """
+        
+        content="# LOG FILE\n"
+        content+="- GENE NAME: "+self.name+"\n"
+        content+="- PATH: "+str(self.out_path.absolute())+"\n"
+        content+="- REQUESTED MUTATIONS:\n"
+        
+        for mutation in self.mutations:
+            content+="-- "+"".join(mutation)+"\n"
+
+        content+="- MAPPABLE MUTATIONS:\n"
+        
+        for mutation in self.mappable_mutations:
+            content+="-- "+"".join(mutation)+"\n"
+            
+        content+="- ISOFORM SCORES:\n"
+        
+        for isoform in self.isoforms:
+            content+="-- "+isoform.isoform_name+"\n"
+            content+="--- Mutation:"
+            content+=str(round(isoform.mutation_score,2))+" Structural:"
+            content+=str(round(isoform.structural_score,2))+" Selection:"
+            content+=str(round(isoform.selection_score,2))+"\n"
+            content+="--- Modellable: "+str(isoform.modellable)+"\n"
+            
+        content+="\n## MODELS\n"
+        
+        for isoform in self.isoforms_to_model:
+            #isoform[0] is the object, isoform[1] is the mutation
+            content+="- "+isoform[0].isoform_name+" "+"".join(isoform[1])+"\n"
+            content+="- Templates: "
+            
+            for template in isoform[0].templates:
+                content+=template.pdb_name+"_"+template.pdb_chain+" "
+            
+            content+="\n"
+            
+            content+="\n".join(isoform[0].modeller_run.logged_scores)+"\n\n"
+            
+    
+        with FileHandler() as fh:
+            fh.write_file(Path(self.out_path,"report.md"),content)

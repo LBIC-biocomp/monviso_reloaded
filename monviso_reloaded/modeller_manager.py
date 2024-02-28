@@ -6,11 +6,13 @@ from .file_handler import FileHandler
 
 
 class Modeller_manager:
-    def __init__(self, isoform, mutation: list, modeller_exec: str):
+    def __init__(self, isoform, mutation: list, modeller_exec: str, model_cutoff: int):
         self.isoform = isoform
         self.mutation = mutation
         self.sequence_to_model = self.isoform.aligned_sequence[:]
         self.modeller_exec = modeller_exec
+        self.model_cutoff = model_cutoff
+        self.logged_scores=[]
 
     def __enter__(self):
         return self
@@ -21,8 +23,8 @@ class Modeller_manager:
     def write(self):
 
         print(
-            f"Modelling {self.isoform.gene_name} "
-            f" {self.isoform.isoform_name} {self.mutation}"
+            f"Modelling {self.isoform.gene_name}"
+            f" {self.isoform.isoform_name} "+"".join(self.mutation)
         )
         if self.mutation != "WT":
             success_mutation = self._mutate_reside(self.mutation)
@@ -112,7 +114,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         return False
 
     def _add_chain_breaks(self, sequences: list) -> list:
-        """For alignments inw which there is no coverage for 7+
+        """For alignments inw which there is no coverage for self.model_cutoff+
         residues, the section without coverage is replaced by
         chain breaks.
 
@@ -133,8 +135,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         max_non_covered = max([seq.count("-") for seq in aligned_seq])
 
         # Search for non-covered subsequences with lenght between
-        # max_non_covered and 7
-        while max_non_covered >= 7:
+        # max_non_covered and model_cutoff
+        while max_non_covered >= self.model_cutoff:
 
             # check if "-" repeated max_non_covered times
             # is present in all the aligned structures (except target seqence)
@@ -225,3 +227,18 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             command, shell=True, universal_newlines=True, check=True
         )
         os.chdir(home_working_directory)
+        self.load_log_file()
+
+    def load_log_file(self):
+        """ Open the log file after the run of modeller.
+        Look for the table with the DOPE scores.
+        Save it as attribute (list).
+        """
+        with FileHandler() as fh:
+            log_path = Path(self.isoform.out_path,"run_modeller_" + "".join(self.mutation) + ".log")
+            logs=fh.read_file(log_path).splitlines()
+            
+            table_start_index=logs.index("Filename                          molpdf     DOPE score    GA341 score")
+            table_end_index=table_start_index+logs[table_start_index:].index("")
+            
+            self.logged_scores=logs[table_start_index:table_end_index]
