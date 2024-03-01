@@ -173,7 +173,15 @@ class InputParser(argparse.ArgumentParser):
         """
         with Path(mutation_file_path).open() as my_file:
             content = my_file.read()
-
+            
+        
+        #Remove useless new lines
+        while content[-1]=="\n":
+            content=content[:-1]
+            
+        while "\n\n\n" in content:
+            content=content.replace('\n\n\n','\n\n')
+        
         blocks = [block.splitlines() for block in content.split("\n\n")]
         return blocks
 

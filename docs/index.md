@@ -30,7 +30,7 @@ Dive into the world of protein isoform analysis with MoNvIso by exploring the fo
 
 - [Installation Guide](installation.md): Learn how to install MoNvIso on your system.
 - [Quick Start Tutorial](tutorial.md): Get up and running with your first analysis.
-- Understanding the Workflow: A deeper dive into each step of the MoNvIso workflow.
-- FAQs: Answers to common questions about MoNvIso.
+- [Understanding the Workflow:](workflow.md) A deeper dive into each step of the MoNvIso workflow.
+- [FAQs](FAQs.md): Answers to common questions about MoNvIso.
 
 MoNvIso is here to enhance your research with advanced protein isoform analysis and modeling. Whether you're investigating mutations, studying protein functions, or exploring structural variations, MoNvIso provides the tools you need to achieve your objectives with precision and ease.

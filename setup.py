@@ -30,11 +30,11 @@ def read_requirements(path):
 
 
 setup(
-    name="monviso_reloaded",
+    name="monviso",
     python_requires='>=3.9',
     version=read("monviso_reloaded", "VERSION"),
-    description="Awesome monviso_reloaded created by Ciskio",
-    url="https://github.com/Ciskio/monviso_reloaded/",
+    description="MoNvIso is a comprehensive software tool designed for the analysis and modeling of protein isoforms. It automates the process of identifying canonical and additional isoforms, assessing their modeling propensity, mapping mutations accurately, and building structural models of proteins.",
+    url="https://github.com/alisamalb/monviso_reloaded",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author="Ciskio",

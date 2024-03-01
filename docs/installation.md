@@ -29,19 +29,26 @@ Ensure you have Python 3.9 installed by running the following command in your te
 python --version
 ```
 
-### 3. Clone the GitHub Repository
+### 3. Install via pip
+
+```bash
+pip install monviso
+```
+
+## Verifying the installation
+After completing the installation steps, verify that the MonViso Reloaded package and all dependencies are correctly installed by running a quick test command or script provided by the package documentation.
+
+### Alternative - Clone the GitHub Repository
 Clone the MonViso Reloaded repository to your local machine:
 
 ```bash
 git clone https://github.com/alisamalb/monviso_reloaded
 cd monviso_reloaded
 ```
-### 4. Run the Setup
+
 Install the package by executing:
 
 ```bash
 python setup.py install
 ```
 
-## Verifying the installation
-After completing the installation steps, verify that the MonViso Reloaded package and all dependencies are correctly installed by running a quick test command or script provided by the package documentation.
