@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from typing import Union
 
-
 class FileHandler:
     def __init__(self):
         pass
@@ -110,3 +109,17 @@ class FileHandler:
             with path.open("r") as file:
                 content = file.read()
                 return content
+        
+    def get_date(self,path: Union[str,Path]):
+        """ Given a file, returns the creation a last-modified
+            time as a tuple in "seconds since the epoch"
+
+        Args:
+            path (Union[str,Path]): The path of the file
+        """
+        # Both the variables would contain time
+        # elapsed since EPOCH in float
+        ti_c = os.path.getctime(path)
+        ti_m = os.path.getmtime(path)
+
+        return ti_c

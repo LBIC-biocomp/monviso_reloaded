@@ -1,5 +1,6 @@
 from pathlib import Path
-
+import datetime
+from .file_handler import FileHandler
 
 class DatabaseParser:
     def __init__(self, db_location: str):
@@ -11,7 +12,21 @@ class DatabaseParser:
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
+    
+    def _check_file_age(self,file_creation_time):
+        """Given a database Path, loads the date of the creation
+        of the file. If it exceeds n_weeks, it raises a warning.
+        
+        The parameter file_creation_time is obtained from FileHandler.get_date()"""
 
+        current_time = datetime.datetime.now()
+        creation_time = datetime.datetime.fromtimestamp(file_creation_time)
+        age = current_time - creation_time
+        
+        if age > datetime.timedelta(weeks=24):
+            print(f"\n\n---WARNING---\n",
+                  "The file database is older than 24 weeks.\nIt should be updated.\n----------")
+    
     def parse_database(self, database_path: Path) -> list[list[str]]:
         """
         Splits the sequences from a database file into a list, where each
@@ -24,8 +39,10 @@ class DatabaseParser:
         :param database_path: The Path pointing to the Uniprot database
         :return: A list of gene sequences, each split in multiple lines
         """
-        with open(database_path, "r") as f:
-            content = f.read()
+        with FileHandler() as fh:
+            content = fh.read_file(database_path)
+            file_creation_time=fh.get_date(database_path)
+            self._check_file_age(file_creation_time)
         return [
             block.splitlines()
             for block in content.split(">")
