@@ -6,20 +6,19 @@ from .file_handler import FileHandler
 
 
 class Modeller_manager:
-    def __init__(self, isoform, mutation: list, modeller_exec: str, model_cutoff: int):
+    def __init__(self, isoform, mutation: list, modeller_exec: str, model_cutoff: int,
+                 number_of_wt:int,number_of_mut:int):
         self.isoform = isoform
         self.mutation = mutation
         self.sequence_to_model = self.isoform.aligned_sequence[:]
         self.modeller_exec = modeller_exec
         self.model_cutoff = model_cutoff
         self.logged_scores=[]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
+        if "".join(mutation)=="WT":
+            self.num_models=number_of_wt
+        else:
+            self.num_models=number_of_mut
+        print("From self.init():")
     def write(self):
 
         print(
@@ -65,7 +64,7 @@ a = automodel(env,
             + """\",
     assess_methods=(assess.DOPE, assess.GA341))
 a.starting_model= 1
-a.ending_model  = 1
+a.ending_model  = """+str(self.num_models)+"""
 a.make()
 ok_models = filter(lambda x: x['failure'] is None, a.outputs)
 toscore = 'DOPE score'
@@ -114,7 +113,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         return False
 
     def _add_chain_breaks(self, sequences: list) -> list:
-        """For alignments inw which there is no coverage for self.model_cutoff+
+        """For alignments in which there is no coverage for self.model_cutoff+
         residues, the section without coverage is replaced by
         chain breaks.
 

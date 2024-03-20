@@ -1,4 +1,5 @@
 from pathlib import Path
+from copy import copy
 
 from Bio.PDB.Polypeptide import index_to_one, three_to_index
 
@@ -250,14 +251,14 @@ class Gene:
             self.isoforms.sort(key=lambda x: -x.selection_score)
 
             # Add wild type to list of isoforms to model
-            self.isoforms_to_model.append([self.isoforms[0], "WT"])
+            self.isoforms_to_model.append([copy(self.isoforms[0]), "WT"])
 
             # Take note of mutations to model
             mutations_to_model = self.mutations[:]
 
             # Add mutations of best isoform
             for mutation in self.isoforms[0].mutations:
-                self.isoforms_to_model.append([self.isoforms[0], mutation])
+                self.isoforms_to_model.append([copy(self.isoforms[0]), mutation])
                 mutations_to_model.remove(mutation)
 
             # Try other isoforms to model all mutations

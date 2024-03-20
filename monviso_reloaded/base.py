@@ -105,8 +105,11 @@ class Run:
             for isoform, mutation in gene.isoforms_to_model:
                 isoform.run_modeller(
                     mutation, self.parameters["MODELLER_EXEC"],
-                    int(self.parameters["MODEL_CUTOFF"])
-                )
+                    int(self.parameters["MODEL_CUTOFF"]),
+                    int(self.parameters["NUM_OF_MOD_WT"]),
+                    int(self.parameters["NUM_OF_MOD_MUT"]))
+
+            
 
     def write_report(self):
         for gene in self.genes:

@@ -39,7 +39,7 @@ class Isoform:
         self.clean_aligned_sequence=""
         
         self.modeller_run=None
-
+        
         self.create_directory()
         self.save_fasta_sequence()
 
@@ -475,9 +475,9 @@ class Isoform:
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
-    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int):
+    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int,number_of_wt:int,number_of_mut:int):
         self.modeller_run=Modeller_manager(
-            self, mutation, modeller_exec, model_cutoff)
+            self, mutation, modeller_exec, model_cutoff,number_of_wt,number_of_mut)
         
         self.modeller_run.write()
         self.modeller_run.run()
