@@ -18,7 +18,6 @@ class Modeller_manager:
             self.num_models=number_of_wt
         else:
             self.num_models=number_of_mut
-        print("From self.init():")
     def write(self):
 
         print(
