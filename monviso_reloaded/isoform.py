@@ -475,9 +475,33 @@ class Isoform:
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
-    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int,number_of_wt:int,number_of_mut:int):
+    def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int,number_of_wt:int,number_of_mut:int,cobalt_home:str):
+        self._modeller_alignment(cobalt_home)
         self.modeller_run=Modeller_manager(
             self, mutation, modeller_exec, model_cutoff,number_of_wt,number_of_mut)
+
         
         self.modeller_run.write()
         self.modeller_run.run()
+
+    def _modeller_alignment(self,cobalt_home):
+        content=">"+self.gene_name+"\n"+"".join(self.sequence)+"\n"
+        for t in self.templates:
+            content+=">"+t.pdb_name+"_"+t.pdb_chain+"\n"+"".join(t.sequence)+"\n"
+            
+            with FileHandler() as fh:
+                templates_path = Path(self.out_path, "filtered_templates_sequences.fasta")
+                fh.write_file(templates_path, content)
+                aligned_path = Path(self.out_path, "filtered_templates_aligned.fasta")
+                if fh.check_existence(aligned_path):
+                    print(
+                        "Cobalt output file for filtered templates "
+                        "already present in folder."
+                    )
+                else:
+                    with Cobalt() as cobalt:
+                        cobalt.run(templates_path, aligned_path, cobalt_home)
+                        print(
+                            f"Cobalt alignment for {self.gene_name}"
+                            f" {self.isoform_name} of filtered templates done."
+                        )

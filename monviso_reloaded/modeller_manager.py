@@ -14,6 +14,8 @@ class Modeller_manager:
         self.modeller_exec = modeller_exec
         self.model_cutoff = model_cutoff
         self.logged_scores=[]
+        self.num_chains=1
+        self.chain_starts=[1]
         if "".join(mutation)=="WT":
             self.num_models=number_of_wt
         else:
@@ -47,11 +49,17 @@ class Modeller_manager:
 from modeller.automodel import *
 from modeller.scripts import complete_pdb
 
+class MyModel(AutoModel):
+    def special_patches(self, aln):
+        # Rename both chains and renumber the residues in each
+        self.rename_segments(segment_ids="""+str(["A" for  i in range(self.num_chains)])+""",
+                             renumber_residues=[1, 1])
+
 log.verbose()
 env = environ()
 env.io.atom_files_directory = '../templates/'
 env.io.hetatm = True
-a = automodel(env,
+a = MyModel(env,
     alnfile =\""""
             + alignment_name
             + """\",
@@ -162,8 +170,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
                         # break ("/").
                         for i, seq in enumerate(aligned_seq):
                             aligned_seq[i] = (
-                                seq[:pos] + "/" + seq[pos + max_non_covered :]
-                            )
+                                seq[:pos] + "/" + seq[pos + max_non_covered :])
+                            self.num_chains+=1
 
                         max_non_covered += (
                             1  # This repeats the check for the current value
@@ -178,14 +186,12 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         alignment_name = "modeller_input_" + "".join(self.mutation) + ".dat"
         output_path = Path(self.isoform.out_path, alignment_name)
         # Create an object storing all names and aligned sequences
-        sequences = [[self.isoform.gene_name, self.sequence_to_model]]
-        for template in self.isoform.templates:
-            sequences.append(
-                [
-                    template.pdb_name + "_" + template.pdb_chain,
-                    template.aligned_sequence,
-                ]
-            )
+        sequences = []
+        with FileHandler() as fh:
+            file_path=Path(self.isoform.out_path,"filtered_templates_aligned.fasta")
+            aligned_sequence_file=fh.read_file(file_path)
+            aligned_sequences=aligned_sequence_file.split(">")[1:]
+            sequences=[[x.split("\n")[0].split()[-1],"".join(x.split('\n')[1:])] for x in aligned_sequences]
 
         # Add chain breaks in place of long seqs with no coverage
         sequences = self._add_chain_breaks(sequences)
