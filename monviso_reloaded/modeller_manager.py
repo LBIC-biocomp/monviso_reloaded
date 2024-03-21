@@ -53,7 +53,7 @@ class MyModel(AutoModel):
     def special_patches(self, aln):
         # Rename both chains and renumber the residues in each
         self.rename_segments(segment_ids="""+str(["A" for  i in range(self.num_chains)])+""",
-                             renumber_residues=[1, 1])
+                             renumber_residues="""+str(self.chain_starts)+""")
 
 log.verbose()
 env = environ()
@@ -119,6 +119,31 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         print(f"Could not apply mutation {mutation}!")
         return False
 
+    def _add_number_to_sequence(self,sequence:str)->list:
+        """From a sequence, return a 2D list with [resnum,resiude]"""
+        numbered_seq=[]
+        i=1
+        for char in sequence:
+            if (char=="-"):
+                numbered_seq.append(["-",char])
+            else:
+                numbered_seq.append([i,char])
+                i+=1
+        return numbered_seq
+    
+    def _save_chain_starts(self,sequence_with_resnum:list)->None:
+        """Given a sequence saved as a list [resnum, residue],
+        save all the residue numbers that represent an interruption
+        in the continuity of the protein chain."""
+
+        #lists al resnums without gaps
+        filtered_numbers=[r[0] for r in sequence_with_resnum if r[0]!="-"]
+
+        for i in range(1,len(filtered_numbers)):
+            if filtered_numbers[i]!=filtered_numbers[i-1]+1:
+                self.chain_starts.append(filtered_numbers[i])
+        print(self.chain_starts)    
+    
     def _add_chain_breaks(self, sequences: list) -> list:
         """For alignments in which there is no coverage for self.model_cutoff+
         residues, the section without coverage is replaced by
@@ -137,6 +162,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         names = [object[0] for object in sequences]
         aligned_seq = [object[1] for object in sequences]
 
+        #Add object to keep trak of residue number in target seq
+        num_target_seq=self._add_number_to_sequence(aligned_seq[0])
         # Calculate worst case number of residues without coverage
         max_non_covered = max([seq.count("-") for seq in aligned_seq])
 
@@ -168,6 +195,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
                         # If that is the case, replace that section in
                         # all sequences (+ target sequences) with a chain
                         # break ("/").
+                        num_target_seq=num_target_seq[:pos]+num_target_seq[pos + max_non_covered :]
                         for i, seq in enumerate(aligned_seq):
                             aligned_seq[i] = (
                                 seq[:pos] + "/" + seq[pos + max_non_covered :])
@@ -179,6 +207,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             max_non_covered -= 1
 
         sequences = [[names[i], aligned_seq[i]] for i in range(len(names))]
+        #Next line is to save resnum at chain breaks as local attributes
+        self._save_chain_starts(num_target_seq)
         return sequences
 
     def write_alignment(self):
