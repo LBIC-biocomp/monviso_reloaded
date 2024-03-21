@@ -15,7 +15,7 @@ class Modeller_manager:
         self.model_cutoff = model_cutoff
         self.logged_scores=[]
         self.num_chains=1
-        self.chain_starts=[1]
+        self.chain_starts=[]
         if "".join(mutation)=="WT":
             self.num_models=number_of_wt
         else:
@@ -139,6 +139,9 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         #lists al resnums without gaps
         filtered_numbers=[r[0] for r in sequence_with_resnum if r[0]!="-"]
 
+        if filtered_numbers[0]=="1":
+            self.chain_starts.append(1)
+
         for i in range(1,len(filtered_numbers)):
             if filtered_numbers[i]!=filtered_numbers[i-1]+1:
                 self.chain_starts.append(filtered_numbers[i])
@@ -225,6 +228,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
 
         # Add chain breaks in place of long seqs with no coverage
         sequences = self._add_chain_breaks(sequences)
+
 
         # Start writing the content string to be printed in the file
         content = ""

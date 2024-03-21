@@ -489,19 +489,19 @@ class Isoform:
         for t in self.templates:
             content+=">"+t.pdb_name+"_"+t.pdb_chain+"\n"+"".join(t.sequence)+"\n"
             
-            with FileHandler() as fh:
-                templates_path = Path(self.out_path, "filtered_templates_sequences.fasta")
-                fh.write_file(templates_path, content)
-                aligned_path = Path(self.out_path, "filtered_templates_aligned.fasta")
-                if fh.check_existence(aligned_path):
-                    print(
+        with FileHandler() as fh:
+            templates_path = Path(self.out_path, "filtered_templates_sequences.fasta")
+            fh.write_file(templates_path, content)
+            aligned_path = Path(self.out_path, "filtered_templates_aligned.fasta")
+            if fh.check_existence(aligned_path):
+                print(
                         "Cobalt output file for filtered templates "
                         "already present in folder."
                     )
-                else:
-                    with Cobalt() as cobalt:
-                        cobalt.run(templates_path, aligned_path, cobalt_home)
-                        print(
+            else:
+                with Cobalt() as cobalt:
+                    cobalt.run(templates_path, aligned_path, cobalt_home)
+                    print(
                             f"Cobalt alignment for {self.gene_name}"
                             f" {self.isoform_name} of filtered templates done."
                         )
