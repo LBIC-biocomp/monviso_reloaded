@@ -26,10 +26,6 @@ class Modeller_manager:
             f"Modelling {self.isoform.gene_name}"
             f" {self.isoform.isoform_name} "+"".join(self.mutation)
         )
-        if self.mutation != "WT":
-            success_mutation = self._mutate_reside(self.mutation)
-            if not success_mutation:
-                raise (RuntimeError("Could not apply mutation!"))
         self.write_alignment()
         self.write_script()
 
@@ -94,30 +90,35 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         with FileHandler() as fh:
             fh.write_file(script_path, content)
 
-    def _mutate_reside(self, mutation) -> bool:
+    def _mutate_reside(self, mutation, sequence:str) -> bool:
         """Take a mutation in the format
         [1 letter amino acid,residue number, 1 lett. amino acid]
         and apply it to the aligned sequence to model,
         taking into account all the "-"'s.
 
-        Returns True, if succesful, else False
+        Returns edited sequence
         """
+ 
+        if mutation=="WT":
+            return sequence
+        
+
         i = int(mutation[1]) - 1
-        while i < len(self.sequence_to_model):
-            actual_residue_index = i - self.sequence_to_model[:i].count("-")
+        while i < len(sequence):
+            actual_residue_index = i - sequence[:i].count("-")
             if (
                 actual_residue_index + 1 == int(mutation[1])
-            ) and self.sequence_to_model[i] == mutation[0]:
-                self.sequence_to_model = (
-                    self.sequence_to_model[:i]
+            ) and sequence[i] == mutation[0]:
+                sequence = (
+                    sequence[:i]
                     + mutation[2]
-                    + self.sequence_to_model[i + 1 :]
+                    + sequence[i + 1 :]
                 )
-                return True
+                return sequence
             i += 1
 
         print(f"Could not apply mutation {mutation}!")
-        return False
+        return sequence
 
     def _add_number_to_sequence(self,sequence:str)->list:
         """From a sequence, return a 2D list with [resnum,resiude]"""
@@ -139,8 +140,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         #lists al resnums without gaps
         filtered_numbers=[r[0] for r in sequence_with_resnum if r[0]!="-"]
 
-        if filtered_numbers[0]=="1":
-            self.chain_starts.append(1)
+   
+        self.chain_starts.append(filtered_numbers[0])
 
         for i in range(1,len(filtered_numbers)):
             if filtered_numbers[i]!=filtered_numbers[i-1]+1:
@@ -210,6 +211,12 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             max_non_covered -= 1
 
         sequences = [[names[i], aligned_seq[i]] for i in range(len(names))]
+        
+        #Remove "/" at the beginning or end of the sequences:
+        if sequences[0][1][0]=="/":
+            sequences=[[s[0],s[1][1:]] for s in sequences]
+        if sequences[0][1][-1]=="/":
+            sequences=[[s[0],s[1][:-1]] for s in sequences]
         #Next line is to save resnum at chain breaks as local attributes
         self._save_chain_starts(num_target_seq)
         return sequences
@@ -226,6 +233,9 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             aligned_sequences=aligned_sequence_file.split(">")[1:]
             sequences=[[x.split("\n")[0].split()[-1],"".join(x.split('\n')[1:])] for x in aligned_sequences]
 
+        #Add mutation if needed
+        sequences[0][1]=self._mutate_reside(self.mutation,sequences[0][1])
+        
         # Add chain breaks in place of long seqs with no coverage
         sequences = self._add_chain_breaks(sequences)
 
