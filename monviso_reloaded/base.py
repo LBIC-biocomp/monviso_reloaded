@@ -94,6 +94,7 @@ class Run:
                 float(self.parameters["W_MUT"]),
                 float(self.parameters["SEQID"]),
                 int(self.parameters["MODEL_CUTOFF"]),
+                cobalt_home=self.parameters["COBALT_HOME"],
             )
 
     def start_modeller(self) -> None:
@@ -102,6 +103,7 @@ class Run:
         as argument.
         """
         for gene in self.genes:
+            gene.report_on_selected_isoforms()
             for isoform, mutation in gene.isoforms_to_model:
                 isoform.run_modeller(
                     mutation, self.parameters["MODELLER_EXEC"],

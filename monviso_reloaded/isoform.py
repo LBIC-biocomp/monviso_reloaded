@@ -25,6 +25,7 @@ class Isoform:
         self.isoform_index = isoform_index
         self.isoform_name = "isoform" + str(self.isoform_index)
         self.mutations = mutations
+        self.mutations_not_in_structure=[]
         self.first_line = sequence[0]
         self.sequence = sequence[1:]
         self.out_path = Path(out_path, self.isoform_name)
@@ -58,6 +59,12 @@ class Isoform:
             fh.write_file(
                 Path(self.out_path, self.isoform_name + ".fasta"), text_output
             )
+
+    def _check_hmmer_errors(self,possible_templates_string):
+        if "Error" in possible_templates_string:
+            print("The hmmsearch for a template resulted in a server error.")
+            print("Monviso will quit.")
+            quit()
 
     def blastp_search(self) -> None:
         """Use the isoform.fasta file saved in the directory
@@ -182,6 +189,7 @@ class Isoform:
                         check=True,
                     )
                     output = result.stdout  # Captured output as a string
+                    self._check_hmmer_errors(output)
                     fh.write_file(templates_path, output)
                 except subprocess.CalledProcessError as e:
                     print(f"Error executing curl command: {e}")
@@ -225,12 +233,13 @@ class Isoform:
             templates_list = fh.read_file(top_templates_path).splitlines()
             return templates_list
 
-    def _template_alignment(self, cobalt_home: Union[str, Path]) -> None:
+    def _template_alignment(self, cobalt_home: Union[str, Path],redo=False) -> None:
         """Create a unique file with the templates sequences and
         run a cobalt MSA.
         Args:
             cobalt_home (Union[str,Path]): Home of the Cobalt program,
             where executables are stored.
+            redo: True if part of the scoring cycle. Alignment can be re-written
         """
         content = ">" + self.gene_name + " " + self.isoform_name + "\n"
         content += "".join(self.sequence) + "\n"
@@ -244,7 +253,7 @@ class Isoform:
             templates_path = Path(self.out_path, "templates_sequences.fasta")
             fh.write_file(templates_path, content)
             aligned_path = Path(self.out_path, "templates_aligned.fasta")
-            if fh.check_existence(aligned_path):
+            if fh.check_existence(aligned_path) and not redo:
                 print(
                     "Cobalt output file for templates "
                     "already present in folder."
@@ -475,33 +484,42 @@ class Isoform:
             w1 * self.structural_score + w2 * self.mutation_score
         )
 
+                    
+    def calculate_score(self,mappable_mutations,model_cutoff,sequence_identity_cutoff,w1,w2,cobalt_home):
+        """Starts a cycle to calculate the mutation, structural and selection scores.
+        The process is repeated in cycle because, after calculating the sequence identity,
+        the number of sequences, and thus the alignments might change. The cycle is repeated
+        untill these values stabilize on a fixed value. After every calculation of the 
+        sequence identy, a new alignment must be created with the filtered sequences.
+        *indirectly: while the list of templates changes, the cycle repeats
+        
+        Args:
+        - mappable mutations: A list of mutations that can be mapped on the sequence. 
+        - model_cutoff: The maximum number of gaps in a region without coverage. Larger
+        gaps are replaced by chain breaks.
+        - sequence_identity_cutoff: Sequences with a lower sequence identity will be skipped.
+        - w1 (float): weight of the structural score
+        - w2 (float): weight of the mutation score
+        """
+        last_template_list=[]
+        
+        while last_template_list!=[t.pdb_name+"_"+t.pdb_chain for t in self.templates]:
+            last_template_list=[t.pdb_name+"_"+t.pdb_chain for t in self.templates]
+            #TO DO
+            #Use of next function in self.load_templates should be avoided
+            self._template_alignment(cobalt_home,redo=True)
+            self.calculate_mutation_score(mappable_mutations)
+            self.calculate_structural_score(model_cutoff)
+            self.filter_templates_by_sequence_identity(
+                    sequence_identity_cutoff
+                )
+            self.calculate_selection_score(w1, w2)
+
     def run_modeller(self, mutation, modeller_exec: str,model_cutoff:int,number_of_wt:int,number_of_mut:int,cobalt_home:str):
-        self._modeller_alignment(cobalt_home)
+        """Create the alignment and start the Modeller run."""
         self.modeller_run=Modeller_manager(
             self, mutation, modeller_exec, model_cutoff,number_of_wt,number_of_mut)
 
         
         self.modeller_run.write()
         self.modeller_run.run()
-
-    def _modeller_alignment(self,cobalt_home):
-        content=">"+self.gene_name+"\n"+"".join(self.sequence)+"\n"
-        for t in self.templates:
-            content+=">"+t.pdb_name+"_"+t.pdb_chain+"\n"+"".join(t.sequence)+"\n"
-            
-        with FileHandler() as fh:
-            templates_path = Path(self.out_path, "filtered_templates_sequences.fasta")
-            fh.write_file(templates_path, content)
-            aligned_path = Path(self.out_path, "filtered_templates_aligned.fasta")
-            if fh.check_existence(aligned_path):
-                print(
-                        "Cobalt output file for filtered templates "
-                        "already present in folder."
-                    )
-            else:
-                with Cobalt() as cobalt:
-                    cobalt.run(templates_path, aligned_path, cobalt_home)
-                    print(
-                            f"Cobalt alignment for {self.gene_name}"
-                            f" {self.isoform_name} of filtered templates done."
-                        )

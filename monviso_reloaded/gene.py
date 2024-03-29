@@ -206,11 +206,12 @@ class Gene:
 
         return standard_mutation_list
 
-    def _report_on_selected_isoforms(self):
+    def report_on_selected_isoforms(self):
         """Print on screen a report on the selected isoforms."""
 
         print(
-            f"For the gene {self.name} the following models will be created:"
+            f"For the gene {self.name} the following models will be created,\n"
+            "if the mutation is covered by the strctural templates:"
         )
         for modellable_isoform in self.isoforms_to_model:
             print(
@@ -220,7 +221,7 @@ class Gene:
 
     def select_isoforms(
         self, w1: float, w2: float, sequence_identity_cutoff: float,
-        model_cutoff: int
+        model_cutoff: int,cobalt_home
     ) -> None:
         """Start the calculation of the scores for all isoforms. The
         templates of each isoform are filtered, based on the sequence
@@ -234,13 +235,9 @@ class Gene:
                                               lower than this, are excluded.
         """
         for isoform in self.isoforms:
-
-            isoform.calculate_mutation_score(self.mappable_mutations)
-            isoform.calculate_structural_score(model_cutoff)
-            isoform.filter_templates_by_sequence_identity(
-                sequence_identity_cutoff
-            )
-            isoform.calculate_selection_score(w1, w2)
+            isoform.calculate_score(self.mappable_mutations,model_cutoff,
+                                    sequence_identity_cutoff,w1,w2,
+                                    cobalt_home)
 
         self.isoforms = [
             isoform for isoform in self.isoforms if isoform.modellable
@@ -277,7 +274,6 @@ class Gene:
                             [isoform_for_mutation, mutation]
                         )
                         mutations_to_model.remove(mutation)
-            self._report_on_selected_isoforms()
 
             # Print the mutations with that cannot
             # be associated to any isoform

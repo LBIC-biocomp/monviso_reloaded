@@ -16,6 +16,8 @@ class Modeller_manager:
         self.logged_scores=[]
         self.num_chains=1
         self.chain_starts=[]
+        self.mutation_is_modellable=True
+        
         if "".join(mutation)=="WT":
             self.num_models=number_of_wt
         else:
@@ -28,6 +30,35 @@ class Modeller_manager:
         )
         self.write_alignment()
         self.write_script()
+    
+    def _check_modellability(self,sequence) -> bool:
+        """Sometimes the mutation can be mapped on the isoform, but it is not
+        in the range of the protein that is covered by the templates. The Gene
+        object that starts the modelling process, should be updated to stop the
+        modelling, and write and informed report.
+        
+        This function checks the mutation residue number in the sequence and returns
+        a boolean representing the presence of the mutated residue. 
+        
+        Args:
+        sequences (list): A list of [residue number, residue], with one element
+        for each residue of the target sequence, after adding chain breaks.
+        
+        Returns:
+        bool: Presence of the mutated residue in the final alignment."""
+        
+        if self.mutation=='WT':
+            return True
+        
+        resnum_to_mutate=int(self.mutation[1])
+        resnumbers=[r[0] for r in sequence]
+        self.mutation_is_modellable = resnum_to_mutate in resnumbers
+        
+        if not self.mutation_is_modellable:
+            self.isoform.mutations_not_in_structure.append(self.mutation)
+            self.isoform.mutations.remove(self.mutation)
+        
+        return self.mutation_is_modellable
 
     def write_script(self):
         alignment_name = "../modeller_input_" + "".join(self.mutation) + ".dat"
@@ -146,7 +177,6 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         for i in range(1,len(filtered_numbers)):
             if filtered_numbers[i]!=filtered_numbers[i-1]+1:
                 self.chain_starts.append(filtered_numbers[i])
-        print(self.chain_starts)    
     
     def _add_chain_breaks(self, sequences: list) -> list:
         """For alignments in which there is no coverage for self.model_cutoff+
@@ -219,6 +249,10 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             sequences=[[s[0],s[1][:-1]] for s in sequences]
         #Next line is to save resnum at chain breaks as local attributes
         self._save_chain_starts(num_target_seq)
+        
+        #Next line is to check if mutation can still be mapped
+        _ =self._check_modellability(num_target_seq)
+        
         return sequences
 
     def write_alignment(self):
@@ -228,7 +262,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         # Create an object storing all names and aligned sequences
         sequences = []
         with FileHandler() as fh:
-            file_path=Path(self.isoform.out_path,"filtered_templates_aligned.fasta")
+            file_path=Path(self.isoform.out_path,"templates_aligned.fasta")
             aligned_sequence_file=fh.read_file(file_path)
             aligned_sequences=aligned_sequence_file.split(">")[1:]
             sequences=[[x.split("\n")[0].split()[-1],"".join(x.split('\n')[1:])] for x in aligned_sequences]
@@ -242,8 +276,8 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
 
         # Start writing the content string to be printed in the file
         content = ""
-        content += ">P1;" + sequences[0][0] + "\n"
-        content += "sequence:" + sequences[0][0] + ":.:.:.:.::::\n"
+        content += ">P1;" + self.isoform.gene_name + "\n"
+        content += "sequence:" + self.isoform.gene_name + ":.:.:.:.::::\n"
         content += sequences[0][1] + "*\n"
 
         # Add templates
@@ -257,10 +291,21 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             )
             content += template_sequence[1] + "*\n"
 
-        with FileHandler() as fh:
-            fh.write_file(output_path, content)
+        #After the last alignment it is know if the mutation
+        #Can be certainly applied. Apply last check before
+        #Writing
+        if self.mutation_is_modellable:
+            with FileHandler() as fh:
+                fh.write_file(output_path, content)
 
     def run(self) -> None:
+        
+        if self.mutation_is_modellable==False:
+            print("Modelling of mutation "+"".join(self.mutation)+
+                  " was eexcluded on "+self.isoform.gene_name+" "+
+                  self.isoform.isoform_name+" due to missing coverage.")
+            return None
+        
         model_path = Path(
             self.isoform.out_path,
             self.isoform.gene_name + "_" + "".join(self.mutation) + "_model",
