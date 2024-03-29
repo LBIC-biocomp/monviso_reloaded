@@ -313,6 +313,16 @@ class Gene:
             content+=str(round(isoform.selection_score,2))+"\n"
             content+="--- Modellable: "+str(isoform.modellable)+"\n"
             
+        #Add a list of mutations excluded due missing structural converage
+        non_covered_isoforms=[]
+        for isoform in self.isoforms_to_model:
+            if isoform[0].modeller_run.mutation_is_modellable==False:
+                non_covered_isoforms.append(isoform)
+        if len(non_covered_isoforms)>0:
+            content+="\nThe following mutations are in a region not covered by templates:\n"
+            for isoform in non_covered_isoforms:
+                content+="".join(isoform[1])+"\n"
+        
         content+="\n## MODELS\n"
         
         for isoform in self.isoforms_to_model:

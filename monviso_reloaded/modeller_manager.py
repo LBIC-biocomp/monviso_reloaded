@@ -56,7 +56,6 @@ class Modeller_manager:
         
         if not self.mutation_is_modellable:
             self.isoform.mutations_not_in_structure.append(self.mutation)
-            self.isoform.mutations.remove(self.mutation)
         
         return self.mutation_is_modellable
 
@@ -304,6 +303,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             print("Modelling of mutation "+"".join(self.mutation)+
                   " was eexcluded on "+self.isoform.gene_name+" "+
                   self.isoform.isoform_name+" due to missing coverage.")
+            self.load_log_file()
             return None
         
         model_path = Path(
@@ -326,12 +326,18 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         """ Open the log file after the run of modeller.
         Look for the table with the DOPE scores.
         Save it as attribute (list).
+        
+        But if the mutation is not modellable, due to missing template
+        converage, just save a warning string as attribute.
         """
-        with FileHandler() as fh:
-            log_path = Path(self.isoform.out_path,"run_modeller_" + "".join(self.mutation) + ".log")
-            logs=fh.read_file(log_path).splitlines()
-            
-            table_start_index=logs.index("Filename                          molpdf     DOPE score    GA341 score")
-            table_end_index=table_start_index+logs[table_start_index:].index("")
-            
-            self.logged_scores=logs[table_start_index:table_end_index]
+        if self.mutation_is_modellable:
+            with FileHandler() as fh:
+                log_path = Path(self.isoform.out_path,"run_modeller_" + "".join(self.mutation) + ".log")
+                logs=fh.read_file(log_path).splitlines()
+                
+                table_start_index=logs.index("Filename                          molpdf     DOPE score    GA341 score")
+                table_end_index=table_start_index+logs[table_start_index:].index("")
+                
+                self.logged_scores=logs[table_start_index:table_end_index]
+        else:
+            self.logged_scores=["! The mutation was not modelled, due to missing templates for that region."]
