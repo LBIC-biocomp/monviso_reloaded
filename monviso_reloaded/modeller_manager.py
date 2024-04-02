@@ -175,7 +175,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
 
         for i in range(1,len(filtered_numbers)):
             if filtered_numbers[i]!=filtered_numbers[i-1]+1:
-                self.chain_starts.append(filtered_numbers[i])
+                self.chain_starts.append(filtered_numbers[i]-1)
     
     def _add_chain_breaks(self, sequences: list) -> list:
         """For alignments in which there is no coverage for self.model_cutoff+
