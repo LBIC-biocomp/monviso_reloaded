@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.1.2 (2024-04-08)
+-----------------
+- Added Containerfile for Docker
+- Fix: Removing sorting of models in Modeller script
+  makes the software compatible with the Modeller's
+  version in conda
+- Fix: Removal of maximum 10 models reported
 
 0.1.1 (2024-04-02)
 ------------------
