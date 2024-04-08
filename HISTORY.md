@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.1.2.2 (2024-04-08)
+0.1.3 (2024-04-08)
 - Fix: Removing sorting of models in Modeller script
   makes the software compatible with the Modeller's
   version in conda
