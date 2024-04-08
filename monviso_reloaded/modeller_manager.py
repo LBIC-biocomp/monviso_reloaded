@@ -101,8 +101,10 @@ a.ending_model  = """+str(self.num_models)+"""
 a.make()
 ok_models = filter(lambda x: x['failure'] is None, a.outputs)
 toscore = 'DOPE score'
-ok_models = sorted(ok_models, key=lambda k: k[toscore])
-models = [m for m in ok_models[0:10]]
+
+models= list(ok_models) if isinstance(ok_models, type(filter(lambda: None, []))) else ok_models
+models.sort(key=lambda k: k[toscore])
+
 myout = open(\""""
             + output_name
             + """\", "w")
