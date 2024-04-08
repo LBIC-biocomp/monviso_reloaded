@@ -52,3 +52,23 @@ Install the package by executing:
 python setup.py install
 ```
 
+### Alternative - Run the Docker container
+
+1. **Download the Containerfile:** First, you need to download the Containerfile. Save the file from this URL: [Containerfile](https://raw.githubusercontent.com/alisamalb/monviso_reloaded/main/Containerfile).
+
+2. **Insert Your Modeller License:** Open the downloaded Containerfile in a text editor and replace `XXXX` with your Modeller license key. This step is crucial for ensuring that Modeller functions correctly within the container.
+
+3. **Build the Docker Image:** With the license key in place, you can now build your Docker image. Open a terminal and run the following command in the directory where the Containerfile is located:   
+```bash
+docker build -t monviso -f Containerfile .
+```
+This command builds a Docker image named monviso using the instructions in your Containerfile.
+
+4. **Run the Container with a Mounted Working Directory:** If you wish to use your own working directory (e.g., /Work) inside the container, you can do so by mounting it when you start the container. Run the following command to start the container and access your working directory within it:
+```bash
+docker run -it -v /Work:/Monviso/Work monviso
+```
+Replace /Work with the path to your actual working directory on the host machine. This command mounts your host directory /Work to /Monviso/Work inside the container, allowing you to work with your files directly from within the container environment.
+
+By following these steps, you'll have a fully functional Monviso environment set up and ready to use in Docker, complete with your required Modeller license and access to your working directory.
+

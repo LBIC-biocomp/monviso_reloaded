@@ -102,7 +102,7 @@ a.make()
 ok_models = filter(lambda x: x['failure'] is None, a.outputs)
 toscore = 'DOPE score'
 
-models= list(ok_models) if isinstance(ok_models, type(filter(lambda: None, []))) else ok_models
+models= list(ok_models)
 models.sort(lambda k: k[toscore])
 
 myout = open(\""""
