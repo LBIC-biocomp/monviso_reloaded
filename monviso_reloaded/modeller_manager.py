@@ -122,7 +122,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         with FileHandler() as fh:
             fh.write_file(script_path, content)
 
-    def _mutate_reside(self, mutation, sequence:str) -> bool:
+    def _mutate_residue(self, mutation, sequence:str) -> bool:
         """Take a mutation in the format
         [1 letter amino acid,residue number, 1 lett. amino acid]
         and apply it to the aligned sequence to model,
@@ -153,7 +153,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         return sequence
 
     def _add_number_to_sequence(self,sequence:str)->list:
-        """From a sequence, return a 2D list with [resnum,resiude]"""
+        """From a sequence, return a 2D list with [resnum,residue]"""
         numbered_seq=[]
         i=1
         for char in sequence:
@@ -177,7 +177,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
 
         for i in range(1,len(filtered_numbers)):
             if filtered_numbers[i]!=filtered_numbers[i-1]+1:
-                self.chain_starts.append(filtered_numbers[i]-1)
+                self.chain_starts.append(filtered_numbers[i]+1)
     
     def _add_chain_breaks(self, sequences: list) -> list:
         """For alignments in which there is no coverage for self.model_cutoff+
@@ -230,7 +230,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
                         # If that is the case, replace that section in
                         # all sequences (+ target sequences) with a chain
                         # break ("/").
-                        num_target_seq=num_target_seq[:pos]+num_target_seq[pos + max_non_covered :]
+                        num_target_seq=num_target_seq[:pos]+num_target_seq[pos + max_non_covered -1:]
                         for i, seq in enumerate(aligned_seq):
                             aligned_seq[i] = (
                                 seq[:pos] + "/" + seq[pos + max_non_covered :])
@@ -269,7 +269,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
             sequences=[[x.split("\n")[0].split()[-1],"".join(x.split('\n')[1:])] for x in aligned_sequences]
 
         #Add mutation if needed
-        sequences[0][1]=self._mutate_reside(self.mutation,sequences[0][1])
+        sequences[0][1]=self._mutate_residue(self.mutation,sequences[0][1])
         
         # Add chain breaks in place of long seqs with no coverage
         sequences = self._add_chain_breaks(sequences)
@@ -303,7 +303,7 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         
         if self.mutation_is_modellable==False:
             print("Modelling of mutation "+"".join(self.mutation)+
-                  " was eexcluded on "+self.isoform.gene_name+" "+
+                  " was excluded on "+self.isoform.gene_name+" "+
                   self.isoform.isoform_name+" due to missing coverage.")
             self.load_log_file()
             return None
