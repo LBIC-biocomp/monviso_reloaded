@@ -1,5 +1,7 @@
 Changelog
 =========
+0.1.4 (2024-04-10)
+- Fix: Correct residue number at chain breaks (for more cases)
 
 0.1.3 (2024-04-08)
 - Fix: Removing sorting of models in Modeller script
