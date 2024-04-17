@@ -37,11 +37,11 @@ setup(
     url="https://github.com/alisamalb/monviso_reloaded",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
-    author="Ciskio",
+    author="S. Albani",
     packages=find_packages(exclude=["tests", ".github"]),
     install_requires=read_requirements("requirements.txt"),
     entry_points={
-        "console_scripts": ["monviso_reloaded = monviso_reloaded.__main__:main"]
+        "console_scripts": ["monviso = monviso_reloaded.__main__:main"]
     },
     extras_require={"test": read_requirements("requirements-test.txt")},
 )

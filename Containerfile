@@ -21,9 +21,6 @@ ENV PATH /miniconda/envs/myenv/bin:$PATH
 # Install Modeller
 RUN conda install -c salilab modeller -y
 
-# Define a build-time argument for the Modeller license
-ARG MODELLER_LICENSE=MODELIRANJE
-
 
 # Replace the placeholder in the Modeller configuration file with the license key
 RUN sed -i "s/XXXX/${MODELLER_LICENSE}/" /miniconda/lib/modeller-*/modlib/modeller/config.py

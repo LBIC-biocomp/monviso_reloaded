@@ -2,3 +2,13 @@ biopython
 pathlib
 numpy
 requests
+torch
+torchvision
+torchaudio
+scipy
+scikit-learn
+h5py
+tqdm
+gemmi
+pandas
+tensorboard
