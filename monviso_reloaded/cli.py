@@ -21,7 +21,7 @@ def analysis(argv):
     run = AnalysisRun()
     run.load_input(argv[1:])
     run.load_genes_from_mutation_list()
-    run.pestoAnalysis()
+    run.analysis()
     
 def main(argv=None):  # pragma no cover
     """

@@ -1,15 +1,17 @@
 import os
 import sys
-import h5py
-import json
 import numpy as np
 import torch as pt 
 import pandas as pd
 from tqdm import tqdm
 from glob import glob
 from pathlib import Path
+from Bio.PDB.SASA import ShrakeRupley
+from Bio.PDB import PDBParser
+from .file_handler import FileHandler
 
-class PestoAnalyzer:
+
+class Analyzer:
     # pylint: disable=import-error
     def __init__(self,pesto_path,output_path,gene_list):
         self.output_path=output_path
@@ -30,18 +32,21 @@ class PestoAnalyzer:
         self.model = self.model.eval().to(self.device)
         
         self._findPDBfiles()
-        self.run()
+        self.runPestoAnalysis()
+        self.runSasaAnalysis()
     
 
     def _findPDBfiles(self):
         
         from src.dataset import StructuresDataset # type: ignore
-        pdb_filepaths=[]
+        self.pdb_filepaths=[]
         for gene in self.gene_list:
-            pdb_filepaths+=glob(str(Path(self.output_path,gene,"*","*model","*pdb")))
-        self.dataset=StructuresDataset(pdb_filepaths, with_preprocessing=True) # type: ignore
+            self.pdb_filepaths+=glob(str(Path(self.output_path,gene,"*","*model","*pdb")))
+        
+        self.pdb_filepaths=[f for f in self.pdb_filepaths if "pesto" not in f]
+        self.dataset=StructuresDataset(self.pdb_filepaths, with_preprocessing=True) # type: ignore
     
-    def run(self):
+    def runPestoAnalysis(self):
         from src.structure import concatenate_chains # type: ignore
         from src.data_encoding import encode_structure, encode_features, extract_topology # type: ignore
         from src.dataset import collate_batch_features # type: ignore
@@ -83,3 +88,38 @@ class PestoAnalyzer:
                     # save results
                     output_filepath = filepath[:-4]+'_pesto_{}.pdb'.format(results[i])
                     save_pdb(split_by_chain(structure), output_filepath)
+    
+    def runSasaAnalysis(self) -> None:
+        p = PDBParser(QUIET=1)
+        with FileHandler() as fh:
+            for pdb in self.pdb_filepaths:
+                
+                struct_sasa_path=Path(pdb.replace(".pdb",".struct.sasa"))
+                residue_sasa_path=Path(pdb.replace(".pdb",".residue.sasa.csv"))
+
+                struct = p.get_structure("Protein", pdb)
+                sr = ShrakeRupley()
+                sr.compute(struct, level="S")
+                sr.compute(struct, level="R")
+                sr.compute(struct, level="A")
+
+                struct_sasa_string=f"Strcuture SASA: {struct.sasa}"
+                fh.write_file(struct_sasa_path,struct_sasa_string)
+                
+                residue_sasa=[]
+                backbone_sasa=[]
+                sidechain_sasa=[]
+                
+                for res in struct.get_residues():
+                    residue_sasa.append(res.sasa)
+                    bb_atoms=[a for a in res.get_atoms() if a.name in ['C','N','CA','O']]
+                    sc_atoms=[a for a in res.get_atoms() if a.name not in ['C','N','CA','O']]
+                    backbone_sasa.append(sum([a.sasa for a in bb_atoms]))
+                    sidechain_sasa.append(sum([a.sasa for a in sc_atoms]))
+                    
+                residue_sasa_string="Residue sasa, Backbone, Sidechain\n"
+                
+                for i,r in enumerate(residue_sasa):
+                    residue_sasa_string+=f"{r},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
+                
+                fh.write_file(residue_sasa_path,residue_sasa_string)

@@ -1,7 +1,7 @@
 from .database_parser import DatabaseParser
 from .gene import Gene
 from .input_parser import InputParser
-from .pesto_analyzer import PestoAnalyzer
+from .analyzer import Analyzer
 
 class IsoformRun:
     def __init__(self):
@@ -128,8 +128,6 @@ class AnalysisRun:
         self.pesto_home=self.parameters["PESTO_HOME"]
         self.output_path=self.parameters["OUTPUT_PATH"]
 
-        
-
     def load_genes_from_mutation_list(self) -> None:
         """Parse the list of mutations and genes from the mutation_list file
         and save the genes as attribute.
@@ -137,6 +135,7 @@ class AnalysisRun:
         self.genes = [m[0] for m in self.input_parser.parse_input(
             self.parameters["INPUT_FILE"])]
         
-    def pestoAnalysis(self) -> None:
-        self.analyzer=PestoAnalyzer(self.pesto_home,self.output_path,
+    def analysis(self) -> None:
+        self.analyzer=Analyzer(self.pesto_home,self.output_path,
                                     self.genes)
+        
