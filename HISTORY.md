@@ -1,5 +1,10 @@
 Changelog
 =========
+0.1.5 (2024-05-08)
+- Add "monviso analysis" tool
+- Move standard monviso worklof to "monviso isoform"
+- Update Docs
+
 0.1.4 (2024-04-10)
 - Fix: Correct residue number at chain breaks (for more cases)
 

@@ -2,7 +2,6 @@ import os
 import sys
 import numpy as np
 import torch as pt 
-import pandas as pd
 from tqdm import tqdm
 from glob import glob
 from pathlib import Path
