@@ -40,6 +40,9 @@ class Template:
         self.pdb_filename = Path(
             self.templates_directory, self.pdb_name + ".pdb"
         )
+        self.mmCIF_filename = Path(
+            self.templates_directory, self.pdb_name + ".cif"
+        )
         self.clean_pdb_filename = Path(
             self.templates_directory, pdb_name + "_clean.pdb"
         )
@@ -70,7 +73,7 @@ class Template:
                 fh.create_directory(self.templates_directory)
 
             with PDB_manager() as pm:
-                if not fh.check_existence(self.pdb_filename):
+                if (not fh.check_existence(self.pdb_filename)) and (not fh.check_existence(self.mmCIF_filename)):
                     file = pm.downloadPDB(
                         self.pdb_name, self.out_path.parent.parent
                     )
@@ -82,8 +85,13 @@ class Template:
         save it as a new file.
         """
         with PDB_manager() as pm:
+            with FileHandler() as fh:
+                if fh.check_existence(self.pdb_filename):
+                    file=self.pdb_filename
+                else:
+                    file=self.mmCIF_filename
             self.resolution = pm.extract_clean_chain(
-                self.pdb_filename,
+                file,
                 self.clean_pdb_filename,
                 self.pdb_chain,
                 self.resolution_cutoff,

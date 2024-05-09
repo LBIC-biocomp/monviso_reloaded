@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection
+from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection, MMCIFParser
 from Bio.PDB.Polypeptide import index_to_one, three_to_index
 
 from .file_handler import FileHandler
@@ -100,7 +100,23 @@ class PDB_manager:
                     )
                     return filepath
                 else:
-                    raise (FileNotFoundError(f"Could not download PDB {pdb}"))
+                    RuntimeWarning(f"Could not download PDB {pdb}. Now trying to find the mmCIF format...")
+                filepath = Path(out_path, download_dir, right_pdbname.replace("pdb","cif"))
+                filename = pdbl.retrieve_pdb_file(
+                    pdb,
+                    pdir=str(Path(out_path, download_dir)),
+                    overwrite=True,
+                    obsolete=False
+                )
+
+                if fh.check_existence(filename):
+                    fh.move_file(
+                        filename, filepath
+                    )
+                    return filepath
+                else:
+                    FileNotFoundError(f"Could not download mmCIF either. Structure {pdb} not found.")
+
 
     def extract_clean_chain(
         self,
@@ -126,7 +142,10 @@ class PDB_manager:
             resolution (float or None): The resolution of the
             X-Ray or CryoEM structure
         """
-        parser = PDBParser(QUIET=True)
+        if str(input_pdb_path).endswith("pdb"):
+            parser = PDBParser(QUIET=True)
+        else:
+            parser = MMCIFParser()
         structure = parser.get_structure("structure", str(input_pdb_path))
         if structure.header["resolution"]:
             if structure.header["resolution"] <= resolution_cutoff:
