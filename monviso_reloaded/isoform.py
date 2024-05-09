@@ -148,7 +148,7 @@ class Isoform:
                 print("HMMsearch output file already present in folder.")
                 return output_path
             else:
-                command = f"{hmmer_home}hmmbuild {output_path} {aligned_path}"
+                command = f"{str(Path(hmmer_home,'hmmbuild'))} {output_path} {aligned_path}"
                 subprocess.run(
                     command, shell=True, universal_newlines=True, check=True
                 )

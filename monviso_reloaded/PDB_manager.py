@@ -91,6 +91,7 @@ class PDB_manager:
                     pdir=str(Path(out_path, download_dir)),
                     file_format="pdb",
                     overwrite=True,
+                    obsolete=False
                 )
 
                 if fh.check_existence(filename):

@@ -22,6 +22,12 @@ def analysis(argv):
     run.load_input(argv[1:])
     run.load_genes_from_mutation_list()
     run.analysis()
+
+def unrecognized_command():
+    print("The command was not recognized. The available commands are:")
+    print(" - monviso isoform")
+    print(" - monviso analysis")
+    print("append \"--help\" at the end to receive help on the tool.")
     
 def main(argv=None):  # pragma no cover
     """
@@ -35,16 +41,16 @@ def main(argv=None):  # pragma no cover
     if argv is None:
         argv = sys.argv[1:]
     
-    if argv[0]=="isoform":
-        isoform(argv)
+    if len(argv)>0:
+        if argv[0]=="isoform":
+            isoform(argv)
 
-    elif argv[0]=="analysis":
-        analysis(argv)
-    
+        elif argv[0]=="analysis":
+            analysis(argv)
+        else:
+            unrecognized_command()
     else:
-        print("The command was not recognized. The available commands are:")
-        print(" - monviso isoform")
-        print(" - monviso analysis")
+        unrecognized_command()
 
 def init() -> None:
     if __name__ == "__main__":
