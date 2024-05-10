@@ -1,14 +1,19 @@
 Changelog
 =========
-0.1.5 (2024-05-08)
+0.1.5 (2024-05-09)
+-----------------
 - Add "monviso analysis" tool
 - Move standard monviso worklof to "monviso isoform"
 - Update Docs
+- Add mmCIF support
+- Fix some bugs on hmmer path, and when mutation number > sequence length
 
 0.1.4 (2024-04-10)
+-----------------
 - Fix: Correct residue number at chain breaks (for more cases)
 
 0.1.3 (2024-04-08)
+-----------------
 - Fix: Removing sorting of models in Modeller script
   makes the software compatible with the Modeller's
   version in conda

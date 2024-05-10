@@ -31,6 +31,7 @@ PRO1439ALA
 DB_LOCATION=./
 COBALT_HOME=./ncbi-cobalt-3.0.0/bin/
 HMMER_HOME=/usr/local/bin/  
+PESTO_HOME=./PeSTO/
 MODELLER_EXEC=mod10.5
 RESOLUTION=4.50
 SEQID=25
@@ -45,7 +46,7 @@ W_MUT=10
 
 
 ```bash
-$ monviso_reloaded -i mutations.txt -o out/ -p parameters.dat
+$ monviso  isoform -i mutations.txt -o out/ -pf parameters.dat
 ```
 
 ## Development
