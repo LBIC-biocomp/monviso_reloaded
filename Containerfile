@@ -2,7 +2,7 @@
 FROM ubuntu:latest
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y wget build-essential
+RUN apt-get update && apt-get install -y wget build-essential git
 RUN mkdir /Monviso
 
 # Download and install Miniconda
@@ -21,13 +21,11 @@ ENV PATH /miniconda/envs/myenv/bin:$PATH
 # Install Modeller
 RUN conda install -c salilab modeller -y
 
-# Define a build-time argument for the Modeller license
-ARG MODELLER_LICENSE=XXXX
-
+# Define a build argument for MODELLER_LICENSE
+ARG MODELLER_LICENSE
 
 # Replace the placeholder in the Modeller configuration file with the license key
 RUN sed -i "s/XXXX/${MODELLER_LICENSE}/" /miniconda/lib/modeller-*/modlib/modeller/config.py
-
 
 # Download and extract Cobalt
 RUN wget -r ftp://ftp.ncbi.nlm.nih.gov/pub/cobalt/executables/LATEST/*x64-linux.tar.gz && \
@@ -49,6 +47,12 @@ RUN wget http://eddylab.org/software/hmmer/hmmer.tar.gz && \
     cd / && \
     rm -r $hmmer_folder
 
+# Clone the PeSTo repository from GitHub
+RUN git clone https://github.com/LBM-EPFL/PeSTo.git /Monviso/PeSTo
+RUN find /Monviso/PeSTo/ -name "*.pdb" -type f -delete
+RUN rm -r /Monviso/PeSTo/.git
+RUN rm -r /Monviso/PeSTo/masif-site_benchmark
+
 # Set the working directory
 WORKDIR /Monviso
 
@@ -59,4 +63,4 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
     gzip -d uniprot_sprot_varsplic.fasta.gz
 
 # Install Monviso using pip in the myenv environment
-RUN /bin/bash -c "source activate myenv && pip install monviso==0.1.4"
+RUN /bin/bash -c "source activate myenv && pip install monviso==0.1.5"

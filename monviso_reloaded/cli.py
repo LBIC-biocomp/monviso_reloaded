@@ -1,19 +1,11 @@
 import sys
 
-from monviso_reloaded.base import Run
+from monviso_reloaded.base import IsoformRun
+from monviso_reloaded.base import AnalysisRun
 
-
-def main(argv=None):  # pragma no cover
-    """
-    Main function
-
-    :param argv: argv
-
-    :return: None
-    """
-    # arguments and parameters
-    run = Run()
-    run.load_input(argv)
+def isoform(argv):
+    run = IsoformRun()
+    run.load_input(argv[1:])
     run.load_mutation_list()
     run.create_genes()
     run.create_isoforms()
@@ -25,6 +17,40 @@ def main(argv=None):  # pragma no cover
     run.start_modeller()
     run.write_report()
 
+def analysis(argv):
+    run = AnalysisRun()
+    run.load_input(argv[1:])
+    run.load_genes_from_mutation_list()
+    run.analysis()
+
+def unrecognized_command():
+    print("The command was not recognized. The available commands are:")
+    print(" - monviso isoform")
+    print(" - monviso analysis")
+    print("append \"--help\" at the end to receive help on the tool.")
+    
+def main(argv=None):  # pragma no cover
+    """
+    Main function
+
+    :param argv: argv
+
+    :return: None
+    """
+    # arguments and parameters
+    if argv is None:
+        argv = sys.argv[1:]
+    
+    if len(argv)>0:
+        if argv[0]=="isoform":
+            isoform(argv)
+
+        elif argv[0]=="analysis":
+            analysis(argv)
+        else:
+            unrecognized_command()
+    else:
+        unrecognized_command()
 
 def init() -> None:
     if __name__ == "__main__":

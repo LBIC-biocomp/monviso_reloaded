@@ -1,11 +1,10 @@
 from .database_parser import DatabaseParser
 from .gene import Gene
 from .input_parser import InputParser
+from .analyzer import Analyzer
 
-
-class Run:
+class IsoformRun:
     def __init__(self):
-        self.args = []
         self.parameters = []
         self.mutation_list = []
         self.input_parser = InputParser()
@@ -17,17 +16,14 @@ class Run:
 
         :param argv: command line arguments
         """
-        self.args, self.parameters = self.input_parser.load_input(argv)
+        _, self.parameters = self.input_parser.load_input(argv)
 
     def load_mutation_list(self) -> None:
         """Parse the list of mutations and genes from the mutation_list file
         and save it as attribute.
-
-        :param mutation_list: path to the file containing the list
-        of mutations and genes
         """
         self.mutation_list = self.input_parser.parse_input(
-            self.args.input_file
+            self.parameters["INPUT_FILE"]
         )
 
     def create_genes(self) -> None:
@@ -35,13 +31,9 @@ class Run:
         in self.mutation_list, and for each gene, create a Gene instance.
         All Gene instances are saved in the
         self.gene list.
-
-        :param mutation_list: A list of the blocks extracted
-        from the input file.
-        At index 0, the list contains the name of the gene.
         """
         for i, gene_mutation_block in enumerate(self.mutation_list):
-            self.genes.append(Gene(gene_mutation_block, self.args.out_path))
+            self.genes.append(Gene(gene_mutation_block, self.parameters["OUTPUT_PATH"]))
 
     def create_isoforms(self) -> None:
         """Loads isoforms for each gene in the 'genes' attribute from
@@ -117,3 +109,33 @@ class Run:
     def write_report(self):
         for gene in self.genes:
             gene.write_report()
+            
+
+class AnalysisRun:
+    def __init__(self):
+        self.parameters = []
+        self.genes = []
+        self.input_parser = InputParser()
+        self.genes = []
+        
+    def load_input(self, argv) -> None:
+        """Load user input from the command line and parameters file
+         and save them as attributes.
+
+        :param argv: command line arguments
+        """
+        _, self.parameters = self.input_parser.load_input(argv)
+        self.pesto_home=self.parameters["PESTO_HOME"]
+        self.output_path=self.parameters["OUTPUT_PATH"]
+
+    def load_genes_from_mutation_list(self) -> None:
+        """Parse the list of mutations and genes from the mutation_list file
+        and save the genes as attribute.
+        """
+        self.genes = [m[0] for m in self.input_parser.parse_input(
+            self.parameters["INPUT_FILE"])]
+        
+    def analysis(self) -> None:
+        self.analyzer=Analyzer(self.pesto_home,self.output_path,
+                                    self.genes)
+        

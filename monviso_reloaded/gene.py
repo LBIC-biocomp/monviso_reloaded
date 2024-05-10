@@ -103,7 +103,12 @@ class Gene:
             can_be_mutated (bool): True if mutation can be applied
             without changing residue number.
         """
-        can_be_mutated = sequence[int(mutation[1]) - 1] == mutation[0]
+        residue_ID=int(mutation[1]) - 1
+
+        if len(sequence)<residue_ID+1: #if sequence too short
+            return False
+
+        can_be_mutated = sequence[residue_ID] == mutation[0]
         return can_be_mutated
 
     def _standardize_mutations(self, mutation_list) -> list:

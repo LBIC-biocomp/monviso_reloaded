@@ -36,6 +36,16 @@ class InputParser(argparse.ArgumentParser):
             type=str,
             required=False,
         )
+        
+        super().add_argument(
+            "-pst",
+            "--pesto_home",
+            help="path to the directory containing the\
+                PeSto repo downloaded from GitHub",
+            type=str,
+            required=False,
+        )
+        
         super().add_argument(
             "-db",
             "--db_home",
@@ -149,12 +159,12 @@ class InputParser(argparse.ArgumentParser):
 
         :param args: passed arguments
         """
-        if not args.par_file and (
-            not args.db_home or not args.cobalt_home or not args.hmmer_home
-        ):
+        if not args.par_file and (not args.db_home or not args.cobalt_home
+                                  or not args.hmmer_home
+                                  or not args.pesto_home):
             raise TypeError(
                 "Specify a parameters file or insert the paths\
-                    to the DBs, COBALT and HMMER manually"
+                    to the DBs, COBALT, PESTO and HMMER manually"
             )
         elif args.par_file and (
             args.db_home or args.cobalt_home or args.hmmer_home
@@ -200,6 +210,9 @@ class InputParser(argparse.ArgumentParser):
             "RESOLUTION": None,
             "SEQID": None,
             "PDB_TO_USE": None,
+            "PESTO_HOME": None,
+            "INPUT_FILE": None,
+            "OUTPUT_PATH": None,
             "DB_LOCATION": None,
             "HMMER_HOME": None,
             "COBALT_HOME": None,
@@ -227,15 +240,19 @@ class InputParser(argparse.ArgumentParser):
                     keywords[key] = value
         return keywords
 
-    def merge_parameters(self, args: argparse.Namespace) -> Dict:
+    def convertArgsToParameters(self, args: argparse.Namespace) -> Dict:
         """Make the parameters dictionary if they are passed as arguments
 
         :param args: passed arguments
         """
+        
         return {
             "RESOLUTION": args.resolution,
             "SEQID": args.sequence_identity,
             "PDB_TO_USE": args.max_pdb_templates,
+            "PESTO_HOME":args.pesto_home,
+            "OUTPUT_PATH":args.out_path,
+            "INPUT_FILE": args.input_file,
             "DB_LOCATION": args.db_home,
             "HMMER_HOME": args.hmmer_home,
             "COBALT_HOME": args.cobalt_home,
@@ -246,7 +263,57 @@ class InputParser(argparse.ArgumentParser):
             "W_MUT": args.w_mut,
             "MODELLER_EXEC": args.modeller_exec,
         }
-
+        
+    def merge_parameters(self,args,parameters):
+        """Merges args and parameters, with a preference for parameters.
+        
+        The settings expressed in the command line will be added to the parameters dictionary.
+        """
+                
+        args_name=[args.resolution,
+              args.sequence_identity,
+              args.max_pdb_templates,
+              args.pesto_home,
+              args.input_file,
+              args.out_path,
+              args.db_home,
+              args.hmmer_home,
+              args.cobalt_home,
+              args.res_cutoff,
+              args.max_model_wt,
+              args.max_model_mut,
+              args.w_struct,
+              args.w_mut,
+              args.modeller_exec
+              ]
+        
+        dict_keys=['RESOLUTION',
+                   'SEQID',
+                   'PDB_TO_USE',
+                   'PESTO_HOME',
+                   'INPUT_FILE',
+                   'OUTPUT_PATH',
+                   'DB_LOCATION',
+                   'HMMER_HOME',
+                   'COBALT_HOME',
+                   'MODEL_CUTOFF',
+                   'NUM_OF_MOD_WT',
+                   'NUM_OF_MOD_MUT',
+                   'W_STRUCT',
+                   'W_MUT',
+                   'MODELLER_EXEC']
+        
+        
+        for i, key in enumerate(parameters):
+            if parameters[key] is None:
+                try:
+                    parameters[key]=args_name[i]
+                except:
+                    raise RuntimeError(f"The argument for {dict_keys[i]} was\
+                    not found in the parameter file,\
+                    and there was a error in reading it from the\
+                    command line .")
+                    
     def print_parameters(
         self, args: argparse.Namespace, parameters: Dict
     ) -> None:
@@ -265,6 +332,7 @@ class InputParser(argparse.ArgumentParser):
             f"OUTPUT DIRECTORY: {args.out_path}\n"
             f"DATABASES DIRECTORY: {parameters['DB_LOCATION']}\n"
             f"COBALT: {parameters['COBALT_HOME']}\n"
+            f"PESTO: {parameters['PESTO_HOME']}\n"
             f"HMMER: {parameters['HMMER_HOME']}\n"
             f"WEIGHT STRUCTURAL SCORE: {parameters['W_STRUCT']}\n"
             f"WEIGHT MUTATION SCORE: {parameters['W_MUT']}\n"
@@ -283,7 +351,8 @@ class InputParser(argparse.ArgumentParser):
         if args.par_file:
             parameters = self.get_parameters(args.par_file)
         else:
-            parameters = self.merge_parameters(args)
+            parameters = self.convertArgsToParameters(args)
+        
+        self.merge_parameters(args,parameters)
         self.print_parameters(args, parameters)
-
         return (args, parameters)

@@ -47,6 +47,7 @@ DB_LOCATION= [path to database location]
 COBALT_HOME=[path to cobalt binaries]
 HMMER_HOME=[path to HMMER binaries]
 MODELLER_EXEC=[command to run modeller e.g., mod10.5]
+PESTO_HOME=[path to cloned PeSTo repo]
 RESOLUTION=4.50
 SEQID=25
 HMM_TO_IMPORT=100
