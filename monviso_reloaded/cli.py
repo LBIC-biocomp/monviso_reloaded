@@ -1,14 +1,28 @@
 import sys
 
-from monviso_reloaded.base import IsoformRun
+from monviso_reloaded.base import HomologyModelRun
 from monviso_reloaded.base import AnalysisRun
 
 def isoform(argv):
-    run = IsoformRun()
+    run = HomologyModelRun()
     run.load_input(argv[1:])
     run.load_mutation_list()
     run.create_genes()
     run.create_isoforms()
+    run.run_blastp()
+    run.run_cobalt()
+    run.run_hmmsearch()
+    run.load_templates()
+    run.select_isoforms()
+    run.start_modeller()
+    run.write_report()
+
+def sequence(argv):
+    run = HomologyModelRun()
+    run.load_input(argv[1:])
+    run.load_sequence_list()
+    run.create_genes(sequenceRun=True)
+    run.create_isoforms(sequenceRun=True)
     run.run_blastp()
     run.run_cobalt()
     run.run_hmmsearch()
@@ -26,6 +40,7 @@ def analysis(argv):
 def unrecognized_command():
     print("The command was not recognized. The available commands are:")
     print(" - monviso isoform")
+    print(" - monviso sequence")
     print(" - monviso analysis")
     print("append \"--help\" at the end to receive help on the tool.")
     
@@ -47,6 +62,9 @@ def main(argv=None):  # pragma no cover
 
         elif argv[0]=="analysis":
             analysis(argv)
+            
+        elif argv[0]=="sequence":
+            sequence(argv)
         else:
             unrecognized_command()
     else:

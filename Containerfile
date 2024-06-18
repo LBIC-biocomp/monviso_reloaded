@@ -1,8 +1,9 @@
 # Use Ubuntu as the base image
 FROM ubuntu:latest
 
+
 # Install necessary packages
-RUN apt-get update && apt-get install -y wget build-essential git
+RUN apt-get update && apt-get install -y wget build-essential git curl
 RUN mkdir /Monviso
 
 # Download and install Miniconda
@@ -63,4 +64,25 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
     gzip -d uniprot_sprot_varsplic.fasta.gz
 
 # Install Monviso using pip in the myenv environment
-RUN /bin/bash -c "source activate myenv && pip install monviso==0.1.5"
+RUN /bin/bash -c "source activate myenv && pip install --default-timeout=200 --retries 5 monviso==0.1.4"
+
+#Install msms
+RUN curl --header 'Host: ccsb.scripps.edu'  --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8' --header 'Accept-Language: en-US,en;q=0.5' --referer 'https://ccsb.scripps.edu/msms/downloads/' --header 'Upgrade-Insecure-Requests: 1' --header 'Sec-Fetch-Dest: document' --header 'Sec-Fetch-Mode: navigate' --header 'Sec-Fetch-Site: same-origin' --header 'Sec-Fetch-User: ?1' 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz' &&\
+mkdir -p msms && tar -xvf msms_i86_64Linux2_2.6.1.tar.gz -C msms \
+rm msms_i86_64Linux2_2.6.1.tar.gz \
+mv msms/msms.x86_64Linux2.2.6.1 msms/msms
+
+RUN echo "DB_LOCATION=/Monviso" > parameters.txt && \
+    echo "MSMS_HOME=/Monviso/msms" >> parameters.txt && \
+    echo "COBALT_HOME=/Monviso/cobalt/bin" >> parameters.txt && \
+    echo "HMMER_HOME=/Monviso/hmmer/bin" >> parameters.txt && \
+    echo "MODELLER_EXEC=mod10.5" >> parameters.txt && \
+    echo "RESOLUTION=4.50" >> parameters.txt && \
+    echo "SEQID=25" >> parameters.txt && \
+    echo "HMM_TO_IMPORT=100" >> parameters.txt && \
+    echo "MODEL_CUTOFF=5" >> parameters.txt && \
+    echo "PDB_TO_USE=10" >> parameters.txt && \
+    echo "NUM_OF_MOD_WT=1" >> parameters.txt && \
+    echo "NUM_OF_MOD_MUT=1" >> parameters.txt && \
+    echo "W_STRUCT=10" >> parameters.txt && \
+    echo "W_MUT=10" >> parameters.txt

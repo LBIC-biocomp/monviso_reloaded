@@ -3,7 +3,7 @@ from .gene import Gene
 from .input_parser import InputParser
 from .analyzer import Analyzer
 
-class IsoformRun:
+class HomologyModelRun:
     def __init__(self):
         self.parameters = []
         self.mutation_list = []
@@ -25,23 +25,49 @@ class IsoformRun:
         self.mutation_list = self.input_parser.parse_input(
             self.parameters["INPUT_FILE"]
         )
+        
+    def load_sequence_list(self) -> None:
+        """Parse the list of gene names, sequence names and sequences from the input file
+        and save it as attribute.
+        """
+        mutation_list = self.input_parser.parse_sequences(
+            self.parameters["INPUT_FILE"]
+        )
+        
+        for i in range(len(mutation_list)//2):
+            self.mutation_list.append([mutation_list[i*2],mutation_list[i*2+1]])
 
-    def create_genes(self) -> None:
+
+    def create_genes(self, sequenceRun=False) -> None:
         """Take the list of mutations of the genes saved
         in self.mutation_list, and for each gene, create a Gene instance.
         All Gene instances are saved in the
         self.gene list.
+        Args:
+            sequenceRun: True if running an homology modelling starting from
+                         sequences instead of gene names.
         """
+        
         for i, gene_mutation_block in enumerate(self.mutation_list):
-            self.genes.append(Gene(gene_mutation_block, self.parameters["OUTPUT_PATH"]))
+            if sequenceRun:
+                self.genes.append(Gene(gene_mutation_block[0],self.parameters["OUTPUT_PATH"],
+                                       sequenceRun=True,sequence=gene_mutation_block[1]))
+            else:
+                self.genes.append(Gene(gene_mutation_block, self.parameters["OUTPUT_PATH"]))
 
-    def create_isoforms(self) -> None:
+    def create_isoforms(self,sequenceRun=False) -> None:
         """Loads isoforms for each gene in the 'genes' attribute from
         the Uniprot database.
+        Args:
+            sequenceRun: True if running an homology modelling starting from
+                         sequences instead of gene names.
         """
         with DatabaseParser(self.parameters["DB_LOCATION"]) as db_parser:
             for gene in self.genes:
-                gene.load_isoforms(db_parser)
+                if sequenceRun:
+                    gene.load_isoforms(None,sequenceRun=True)
+                else:
+                    gene.load_isoforms(db_parser)
 
     def run_blastp(self) -> None:
         """Start a blastp query for every loaded isoform. The proper
@@ -126,6 +152,7 @@ class AnalysisRun:
         """
         _, self.parameters = self.input_parser.load_input(argv)
         self.pesto_home=self.parameters["PESTO_HOME"]
+        self.msms_home=self.parameters["MSMS_HOME"]
         self.output_path=self.parameters["OUTPUT_PATH"]
 
     def load_genes_from_mutation_list(self) -> None:
@@ -137,5 +164,5 @@ class AnalysisRun:
         
     def analysis(self) -> None:
         self.analyzer=Analyzer(self.pesto_home,self.output_path,
-                                    self.genes)
+                                    self.genes,self.msms_home)
         

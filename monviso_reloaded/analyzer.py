@@ -8,11 +8,12 @@ from pathlib import Path
 from Bio.PDB.SASA import ShrakeRupley
 from Bio.PDB import PDBParser
 from .file_handler import FileHandler
-
+from Bio.PDB.ResidueDepth import _read_vertex_array, residue_depth
+import subprocess
 
 class Analyzer:
     # pylint: disable=import-error
-    def __init__(self,pesto_path,output_path,gene_list):
+    def __init__(self,pesto_path,output_path,gene_list,msms_home):
         self.output_path=output_path
         self.gene_list=gene_list
         model_path=os.path.join(pesto_path,"model/save/i_v4_1_2021-09-07_11-21/")
@@ -31,8 +32,9 @@ class Analyzer:
         self.model = self.model.eval().to(self.device)
         
         self._findPDBfiles()
-        self.runPestoAnalysis()
-        self.runSasaAnalysis()
+        #self.runPestoAnalysis()
+        #self.runSasaAnalysis()
+        self.runDepthAnalysis(msms_home)
     
 
     def _findPDBfiles(self):
@@ -122,3 +124,29 @@ class Analyzer:
                     residue_sasa_string+=f"{r},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
                 
                 fh.write_file(residue_sasa_path,residue_sasa_string)
+                
+    def runDepthAnalysis(self,msms_home) -> None:
+        p = PDBParser(QUIET=1)
+        with FileHandler() as fh:
+            for pdb in self.pdb_filepaths:
+                print("Calculating residue depth for file "+pdb+"...")
+                residue_depth_path=Path(pdb.replace(".pdb",".residue.depth.csv"))
+                tmp_name=abs(hash(str(pdb)))
+                tmp_xyzr=Path("/tmp/",str(tmp_name)+".xyzr")
+                tmp_surf=Path("/tmp/",str(tmp_name)+".surf")
+                command=str(Path(msms_home,"pdb_to_xyzr"))+" "+str(pdb)+" > "+str(tmp_xyzr)
+                
+                result = subprocess.check_output(command,shell=True)
+                command=str(Path(msms_home+"/msms")) +" -if "+str(tmp_xyzr)+" -of "+str(tmp_surf)
+                result = subprocess.check_output(command,shell=True)
+                command="rm "+str(tmp_xyzr)
+                subprocess.check_output(command,shell=True)
+                surface=_read_vertex_array(str(tmp_surf)+".vert")
+                
+                structure=p.get_structure("protein",pdb)
+                depths=[]
+                for res in structure.get_residues():
+                    depths.append(residue_depth(res, surface))
+                
+                content="Residue depth\n"+"\n".join([str(x) for x in depths])
+                fh.write_file(residue_depth_path, content)

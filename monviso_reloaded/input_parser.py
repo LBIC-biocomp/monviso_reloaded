@@ -62,6 +62,14 @@ class InputParser(argparse.ArgumentParser):
             type=str,
             required=False,
         )
+        
+        super().add_argument(
+            "-ms",
+            "--msms_home",
+            help="Path to the directory containing the executables of MSMS",
+            type=str,
+            required=False,
+        )
 
         super().add_argument(
             "-hmmer",
@@ -194,6 +202,55 @@ class InputParser(argparse.ArgumentParser):
         
         blocks = [block.splitlines() for block in content.split("\n\n")]
         return blocks
+    
+    def parse_sequences(self,sequence_file_path: argparse.Namespace) -> List:
+        """Parses a sequence file to extract gene names, sequence names,
+        mutation lists, and protein sequences.
+
+        Args:
+            sequence_file_path (argparse.Namespace): The path to the file containing
+                                                    gene and sequence names, followed by
+                                                    mutation list and on protein sequence
+                                                    on a new line.
+
+        Returns:
+            List: An alternating list of [gene name, sequence name, mutation list] followed by
+                                        the string of the sequence.
+        """
+        parsed_sequences=[]
+        with Path(sequence_file_path).open() as my_file:
+            content = my_file.read().split("\n")
+        
+        for i, line in enumerate(content):
+            
+            if line=="\n":
+                pass
+            elif line.startswith(">"):
+                splitline=line[1:].split(':')
+                if len(splitline)<1:
+                    raise ValueError('While reading the sequence metadata, not enough information was found.'
+                                     '\nThe first line must start with ">" and include at least a protein name'
+                                     ' and a sequence name separated by ";".'
+                                     f"The line that led to the error is: {line}")
+                if len(splitline)>3:
+                    raise ValueError('Too many columns (:) in the file.'
+                                     f"The line that led to the error is: {line}")
+                if len(splitline)==3:
+                    splitline[2]=[mutation.replace(" ","") for mutation in splitline[2].split(",")]
+                    
+                parsed_sequences.append([splitline])            
+            else:
+                parsed_sequences[-1].append(line)
+        
+        if min([len(chunk) for chunk in parsed_sequences])<2:
+            raise ValueError("Not all lines starting with > have an associated sequence.")      
+        else:
+           merged_parsed_sequences=[]
+           for chunk in parsed_sequences:
+               merged_parsed_sequences.append(chunk[0])
+               merged_parsed_sequences.append("".join(chunk[1:]).replace("\n",""))
+        
+        return merged_parsed_sequences
 
     def get_parameters(
         self,
@@ -216,6 +273,7 @@ class InputParser(argparse.ArgumentParser):
             "DB_LOCATION": None,
             "HMMER_HOME": None,
             "COBALT_HOME": None,
+            "MSMS_HOME": None,
             "MODEL_CUTOFF": None,
             "NUM_OF_MOD_WT": None,
             "NUM_OF_MOD_MUT": None,
@@ -256,6 +314,7 @@ class InputParser(argparse.ArgumentParser):
             "DB_LOCATION": args.db_home,
             "HMMER_HOME": args.hmmer_home,
             "COBALT_HOME": args.cobalt_home,
+            "MSMS_HOME": args.msms_home,
             "MODEL_CUTOFF": args.res_cutoff,
             "NUM_OF_MOD_WT": args.max_model_wt,
             "NUM_OF_MOD_MUT": args.max_model_mut,
@@ -279,6 +338,7 @@ class InputParser(argparse.ArgumentParser):
               args.db_home,
               args.hmmer_home,
               args.cobalt_home,
+              args.msms_home,
               args.res_cutoff,
               args.max_model_wt,
               args.max_model_mut,
@@ -296,6 +356,7 @@ class InputParser(argparse.ArgumentParser):
                    'DB_LOCATION',
                    'HMMER_HOME',
                    'COBALT_HOME',
+                   'MSMS_HOME',
                    'MODEL_CUTOFF',
                    'NUM_OF_MOD_WT',
                    'NUM_OF_MOD_MUT',

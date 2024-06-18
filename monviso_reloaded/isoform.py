@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 from typing import Union
-
+import time
 from Bio import SeqIO
 from Bio.Blast import NCBIWWW as blastq
 from Bio.Blast import NCBIXML as blastparser
@@ -16,6 +16,7 @@ class Isoform:
     def __init__(
         self,
         gene_name: str,
+        sequence_name:str,
         sequence: list[str],
         isoform_index: int,
         out_path: Union[str, Path],
@@ -23,7 +24,10 @@ class Isoform:
     ):
         self.gene_name = gene_name
         self.isoform_index = isoform_index
-        self.isoform_name = "isoform" + str(self.isoform_index)
+        if sequence_name=="isoform":
+            self.isoform_name = "isoform" + str(self.isoform_index)
+        else:
+            self.isoform_name=sequence_name
         self.mutations = mutations
         self.mutations_not_in_structure=[]
         self.first_line = sequence[0]
@@ -76,7 +80,6 @@ class Isoform:
         )
         file_path = Path(self.out_path, self.isoform_name + ".fasta")
         out_path = Path(self.out_path, self.isoform_name + "_hits.fasta")
-
         with FileHandler() as fh:
             if fh.check_existence(out_path):
                 print(
@@ -85,7 +88,7 @@ class Isoform:
 
             else:
                 fasta_file = SeqIO.read(file_path, "fasta")
-
+                time.sleep(60)
                 results = blastq.qblast(
                     "blastp",
                     "swissprot",
@@ -371,8 +374,11 @@ class Isoform:
             mappable_mutations (list): The list of mutations that can be mapped
                                        on at least one isoform of the gene.
         """
-
-        score = len(self.mutations) / len(mappable_mutations)
+        
+        if len(mappable_mutations)>0:
+            score = len(self.mutations) / len(mappable_mutations)
+        else:
+            score=1
         self.mutation_score = score
 
     def calculate_structural_score(self, model_cutoff: int) -> None:
@@ -388,6 +394,10 @@ class Isoform:
             total_number_residues = 0  # to increase when reading alignment
             modellable_residues = 0  # to be increase when reaading alignment
 
+            #if no templates, return zero
+            if len(alignment)<3:
+                return 0
+            
             self.aligned_sequence = "".join(alignment[1].splitlines()[1:])
 
             templates_alignment = []

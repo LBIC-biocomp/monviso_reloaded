@@ -36,7 +36,7 @@ class Cobalt:
 
         print("Doing MSA with COBALT.")
         command = [
-            f"{cobalt_home}/cobalt",
+            str(Path(cobalt_home,"cobalt")),
             "-i",
             str(hits_file),
             "-outfmt",

@@ -9,13 +9,19 @@ from .isoform import Isoform
 
 
 class Gene:
-    def __init__(self, gene_mutation_block: list[list], out_path: str):
+    def __init__(self, gene_mutation_block: list[list], out_path: str, sequenceRun=False,sequence=None):
         self.name = gene_mutation_block[0].upper()
-        self.mutations = self._standardize_mutations(gene_mutation_block[1:])
+        if not sequenceRun:
+            self.mutations = self._standardize_mutations(gene_mutation_block[1:])
+            self.sequence_name="isoform"
+            self.sequences = []
+        else:
+            self.sequence_name=gene_mutation_block[1]
+            self.mutations = self._standardize_mutations(gene_mutation_block[2])
+            self.sequences=[sequence]
         self.mappable_mutations = []
         self.out_path = Path(out_path, self.name)
         self.create_directory()
-        self.sequences = []
         self.isoforms = []
 
         self.isoforms_to_model = []
@@ -37,22 +43,26 @@ class Gene:
         self.sequences = canonical_sequences
         noncanonical_sequences = db_parser.get_noncanonical_isoforms(self.name)
         self.sequences += noncanonical_sequences
-
-    def load_isoforms(self, db_parser: DatabaseParser) -> None:
+                
+    def load_isoforms(self, db_parser: DatabaseParser, sequenceRun=False) -> None:
         """Create an Isoform instance, for each sequence
         found in the databases, if at least a mutation can
          be mapped onto it.
 
         :param db_parser: instance of DatabaseParser.
         """
-        self.load_sequences(db_parser)
+        if not sequenceRun:
+            self.load_sequences(db_parser)
         for isoform_index, sequence in enumerate(self.sequences):
 
             # Make a list of all the mutations that can be directly mapped
             # onto this isoform
             modellable_mutations = []
             # This makes the multiline fasta into one-line:
-            sequence_string = "".join("".join(sequence[1:]).splitlines())
+            if sequenceRun:
+                sequence_string=sequence
+            else:
+                sequence_string = "".join("".join(sequence[1:]).splitlines())
             for mutation in self.mutations:
                 if self._check_presence_mutated_residue(
                     sequence_string, mutation
@@ -73,19 +83,23 @@ class Gene:
             if len(modellable_mutations) == 0:
                 print(
                     "None of the mutations can be mapped on"
-                    f" {self.name} isoform_{isoform_index}"
+                    f" {self.name} isoform_{isoform_index},"
                 )
 
-            else:
-                self.isoforms.append(
+ #           else:
+            if sequenceRun:
+                sequence=[self.name+" "+self.sequence_name,sequence]
+            self.isoforms.append(
                     Isoform(
                         self.name,
+                        self.sequence_name,
                         sequence,
                         isoform_index,
                         self.out_path,
                         modellable_mutations,
                     )
                 )
+            
 
     def _check_presence_mutated_residue(
         self, sequence: str, mutation: list
@@ -147,7 +161,6 @@ class Gene:
 
         for i, mutation in enumerate(mutation_list):
             mutation = "".join(mutation.split())  # remove whitespaces
-
             first_resname = []
             number = []
 
@@ -223,6 +236,7 @@ class Gene:
                 f"{modellable_isoform[0].isoform_name} "
                 + "".join(modellable_isoform[1])
             )
+            
 
     def select_isoforms(
         self, w1: float, w2: float, sequence_identity_cutoff: float,
