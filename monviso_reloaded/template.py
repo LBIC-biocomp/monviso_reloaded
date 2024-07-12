@@ -57,8 +57,9 @@ class Template:
         self.sequence_identity = 0
 
         self.get_pdb_file()
-        self.get_clean_pdb_chain()
-        if self.usable:
+        if self.usable:  # This first check removes PDBs with obsolete files
+            self.get_clean_pdb_chain()
+        if self.usable: # The second one actually checks for resolution, etc.
             self.get_fasta()
 
     def get_pdb_file(self) -> None:
@@ -77,7 +78,10 @@ class Template:
                     file = pm.downloadPDB(
                         self.pdb_name, self.out_path.parent.parent
                     )
-                    fh.copy_file(file, self.templates_directory)
+                    if file:
+                        fh.copy_file(file, self.templates_directory)
+                    else:
+                        self.usable=False
 
     def get_clean_pdb_chain(self) -> None:
         """Take the original PDB file in the template directory,

@@ -115,8 +115,9 @@ class PDB_manager:
                     )
                     return filepath
                 else:
-                    FileNotFoundError(f"Could not download mmCIF either. Structure {pdb} not found.")
+                    RuntimeWarning(f"Could not download mmCIF either. Structure {pdb} not found.")
 
+                return False
 
     def extract_clean_chain(
         self,
