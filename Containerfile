@@ -3,7 +3,7 @@ FROM ubuntu:latest
 
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y wget build-essential git curl
+RUN apt-get update && apt-get install -y wget build-essential git curl make g++
 RUN mkdir /Monviso
 
 # Download and install Miniconda
@@ -48,6 +48,25 @@ RUN wget http://eddylab.org/software/hmmer/hmmer.tar.gz && \
     cd / && \
     rm -r $hmmer_folder
 
+#Install FFTW
+ENV FFTW_TARGET fftw-3.3.8
+
+RUN wget -P /tmp http://www.fftw.org/${FFTW_TARGET}.tar.gz && \
+    tar xzf /tmp/${FFTW_TARGET}.tar.gz -C /tmp && \
+    rm -rf /tmp/${FFTW_TARGET}.tar.gz && \
+    cd /tmp/${FFTW_TARGET} && \
+    ./configure --enable-float --enable-sse2 --prefix=/usr/local/${FFTW_TARGET} && \
+    make -j$(nproc) && \
+    make install
+
+#Install Megadock
+RUN git clone https://github.com/akiyamalab/MEGADOCK.git /Monviso/MEGADOCK
+RUN sed -i 's/USE_GPU    := 1/USE_GPU    := 0/' /Monviso/MEGADOCK/Makefile
+RUN sed -i 's/USE_MPI    := 1/USE_MPI    := 0/' /Monviso/MEGADOCK/Makefile
+RUN sed -i 's#FFTW_INSTALL_PATH ?= /usr/local#FFTW_INSTALL_PATH ?= /usr/local/${FFTW_TARGET}#' /Monviso/MEGADOCK/Makefile
+WORKDIR /Monviso/MEGADOCK
+RUN make -j$(nproc)
+
 # Clone the PeSTo repository from GitHub
 RUN git clone https://github.com/LBM-EPFL/PeSTo.git /Monviso/PeSTo
 RUN find /Monviso/PeSTo/ -name "*.pdb" -type f -delete
@@ -67,12 +86,13 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
 RUN /bin/bash -c "source activate myenv && pip install --default-timeout=200 --retries 5 monviso==0.1.4"
 
 #Install msms
-RUN curl --header 'Host: ccsb.scripps.edu'  --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8' --header 'Accept-Language: en-US,en;q=0.5' --referer 'https://ccsb.scripps.edu/msms/downloads/' --header 'Upgrade-Insecure-Requests: 1' --header 'Sec-Fetch-Dest: document' --header 'Sec-Fetch-Mode: navigate' --header 'Sec-Fetch-Site: same-origin' --header 'Sec-Fetch-User: ?1' 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz' &&\
-mkdir -p msms && tar -xvf msms_i86_64Linux2_2.6.1.tar.gz -C msms \
-rm msms_i86_64Linux2_2.6.1.tar.gz \
+RUN curl -L 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz'
+RUN mkdir -p msms && tar -xvf msms_i86_64Linux2_2.6.1.tar.gz -C msms &&\
+rm msms_i86_64Linux2_2.6.1.tar.gz &&\
 mv msms/msms.x86_64Linux2.2.6.1 msms/msms
 
 RUN echo "DB_LOCATION=/Monviso" > parameters.txt && \
+    echo "MEGADOCK_HOME=/Monviso/MEGADOCK" >> parameters.txt && \
     echo "MSMS_HOME=/Monviso/msms" >> parameters.txt && \
     echo "COBALT_HOME=/Monviso/cobalt/bin" >> parameters.txt && \
     echo "HMMER_HOME=/Monviso/hmmer/bin" >> parameters.txt && \
