@@ -1,9 +1,20 @@
 # Use Ubuntu as the base image
 FROM ubuntu:latest
 
+# Define a build argument for the HDocklite files
+ARG HDOCKLITE_URL
+ENV HDOCKLITE_URL=$HDOCKLITE_URL
+# Fail the build if the archive URL or path is not provided
+RUN if [ -z "$HDOCKLITE_URL" ]; then \
+        echo "Error: HDOCKLITE_URL not provided"; \
+        exit 1; \
+    fi
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y wget build-essential git curl make g++
+RUN apt-get update && apt-get install -y wget build-essential git curl make g++ \
+    nano cmake gfortran-9 flex csh
+RUN apt-get clean 
+RUN ln -s /usr/bin/gfortran-9 /usr/bin/gfortran
 RUN mkdir /Monviso
 
 # Download and install Miniconda
@@ -27,6 +38,7 @@ ARG MODELLER_LICENSE
 
 # Replace the placeholder in the Modeller configuration file with the license key
 RUN sed -i "s/XXXX/${MODELLER_LICENSE}/" /miniconda/lib/modeller-*/modlib/modeller/config.py
+
 
 # Download and extract Cobalt
 RUN wget -r ftp://ftp.ncbi.nlm.nih.gov/pub/cobalt/executables/LATEST/*x64-linux.tar.gz && \
@@ -73,6 +85,29 @@ RUN find /Monviso/PeSTo/ -name "*.pdb" -type f -delete
 RUN rm -r /Monviso/PeSTo/.git
 RUN rm -r /Monviso/PeSTo/masif-site_benchmark
 
+
+## Checkout HADDOCK 3 and custom cns1.3 files
+RUN mkdir /Monviso/haddock3
+
+RUN git clone --recursive https://github.com/haddocking/haddock3.git /Monviso/haddock3 && \
+    cd /Monviso/haddock3 && \
+    ## v3.0.0-beta.5
+    git checkout 1482d85 && \
+    cd /Monviso
+RUN git clone --recursive https://github.com/colbyford/HADDOCKer.git /tmp/HADDOCKer
+RUN mv /tmp/HADDOCKer/HADDOCK3/cns_solve_1.3_all_intel-mac_linux.tar.gz /Monviso
+
+## Note: The custom cns1.3 files are from the HADDOCK3 repo under "varia"
+RUN export CNS=/Monviso/cns_solve && \
+    tar -xzf /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz -C /Monviso/&& \
+    mv /Monviso/cns_solve_1.3/ $CNS && \
+    rm /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz && \
+    cp /Monviso/haddock3/varia/cns1.3/* $CNS/source && \
+    sed -i 's/_CNSsolve_location_/\/Monviso\/cns_solve/g' $CNS/cns_solve_env && \
+    chmod -R 777 /Monviso && \
+    cd $CNS && \
+    make install compiler=gfortran
+
 # Set the working directory
 WORKDIR /Monviso
 
@@ -91,6 +126,15 @@ RUN mkdir -p msms && tar -xvf msms_i86_64Linux2_2.6.1.tar.gz -C msms &&\
 rm msms_i86_64Linux2_2.6.1.tar.gz &&\
 mv msms/msms.x86_64Linux2.2.6.1 msms/msms
 
+# Copy the HDockLite file or download from the URL and extract it
+RUN if echo "$HDOCKLITE_URL" | grep -q 'huanglab'; then \
+        curl -o /Monviso/HDOCKlite.tar.gz "$HDOCKLITE_URL" && \
+        tar -xzf /Monviso/HDOCKlite.tar.gz -C /Monviso; \
+    else \
+        cp "$HDOCKLITE_URL" /Monviso/HDOCKlite.tar.gz && \
+        tar -xzf /Monviso/HDOCKlite.tar.gz -C /Monviso; \
+    fi
+
 RUN echo "DB_LOCATION=/Monviso" > parameters.txt && \
     echo "MEGADOCK_HOME=/Monviso/MEGADOCK" >> parameters.txt && \
     echo "MSMS_HOME=/Monviso/msms" >> parameters.txt && \
@@ -106,3 +150,6 @@ RUN echo "DB_LOCATION=/Monviso" > parameters.txt && \
     echo "NUM_OF_MOD_MUT=1" >> parameters.txt && \
     echo "W_STRUCT=10" >> parameters.txt && \
     echo "W_MUT=10" >> parameters.txt
+
+RUN rm -rf /tmp/*
+RUN rm /Monviso/HDOCKlite.tar.gz
