@@ -118,7 +118,10 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
     gzip -d uniprot_sprot_varsplic.fasta.gz
 
 # Install Monviso using pip in the myenv environment
-RUN /bin/bash -c "source activate myenv && pip install --default-timeout=200 --retries 5 monviso==0.1.4"
+RUN git clone https://github.com/LBIC-biocomp/monviso_reloaded
+RUN cd monviso_reloaded
+RUN /bin/bash -c "source activate myenv && pip install -e ."
+RUN cd ..
 
 #Install msms
 RUN curl -L 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz'

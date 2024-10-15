@@ -45,6 +45,33 @@ class InputParser(argparse.ArgumentParser):
             type=str,
             required=False,
         )
+
+        super().add_argument(
+            "-hdk",
+            "--haddock_home",
+            help="path to the directory containing the\
+                haddock home",
+            type=str,
+            required=False,
+        )
+        
+        super().add_argument(
+            "-hdl",
+            "--hdocklite_home",
+            help="path to the directory containing the\
+                HDOCKlite home",
+            type=str,
+            required=False,
+        )
+        
+        super().add_argument(
+            "-mg",
+            "--megadock_home",
+            help="path to the directory containing the\
+                megadock home",
+            type=str,
+            required=False,
+        )
         
         super().add_argument(
             "-db",
@@ -182,11 +209,12 @@ class InputParser(argparse.ArgumentParser):
                     insert parameters manually"
             )
 
-    def parse_input(self, mutation_file_path: argparse.Namespace) -> List:
+    def parse_input(self, mutation_file_path: argparse.Namespace, expected_block_length=None) -> List:
         """Parse the list of mutations and genes from the mutation_list file.
 
         :param mutation_list: path to the file containing the list
         of mutations and genes
+        :param expected_block_length: expected number of lines in the block in the input file. 2 for docking.
         :return: The list of gene and mutations
         """
         with Path(mutation_file_path).open() as my_file:
@@ -201,7 +229,31 @@ class InputParser(argparse.ArgumentParser):
             content=content.replace('\n\n\n','\n\n')
         
         blocks = [block.splitlines() for block in content.split("\n\n")]
+        self._check_block_length(blocks,expected_block_length)
+        
         return blocks
+    
+    def _check_block_length(self,blocks, n=None) -> bool:
+        """Check the block lenth of each of the block obtained from the input
+        file. All of the block must have a length of n, not to return an error..
+
+        Args:
+            blocks (_type_): Blocks obtained from input file
+            n (int, optional): _description_. Defaults to 2.
+        """
+
+        if len(blocks)<1:
+            raise ValueError("The input file is empty.")
+        
+        else:
+            if n is None:
+                return True
+            else:
+                blocks_with_correct_length=sum([len(x)==n for x in blocks])
+                if blocks_with_correct_length==len(blocks):
+                    return True
+                else:
+                    raise ValueError(f"Block of text with length different than {n} line in the inpute file.")
     
     def parse_sequences(self,sequence_file_path: argparse.Namespace) -> List:
         """Parses a sequence file to extract gene names, sequence names,
@@ -268,6 +320,9 @@ class InputParser(argparse.ArgumentParser):
             "SEQID": None,
             "PDB_TO_USE": None,
             "PESTO_HOME": None,
+            "HADDOCK_HOME": None,
+            "HDOCKLITE_HOME": None,
+            "MEGADOCK_HOME": None,
             "INPUT_FILE": None,
             "OUTPUT_PATH": None,
             "DB_LOCATION": None,
@@ -309,6 +364,9 @@ class InputParser(argparse.ArgumentParser):
             "SEQID": args.sequence_identity,
             "PDB_TO_USE": args.max_pdb_templates,
             "PESTO_HOME":args.pesto_home,
+            "HADDOCK_HOME":args.haddock_home,
+            "HDOCKLITE_HOME":args.hdocklite_home,
+            "MEGADOCK_HOME":args.megadock_home,
             "OUTPUT_PATH":args.out_path,
             "INPUT_FILE": args.input_file,
             "DB_LOCATION": args.db_home,
@@ -333,6 +391,9 @@ class InputParser(argparse.ArgumentParser):
               args.sequence_identity,
               args.max_pdb_templates,
               args.pesto_home,
+              args.haddock_home,
+              args.hdocklite_home,
+              args.megadock_home,
               args.input_file,
               args.out_path,
               args.db_home,
@@ -351,6 +412,9 @@ class InputParser(argparse.ArgumentParser):
                    'SEQID',
                    'PDB_TO_USE',
                    'PESTO_HOME',
+                   'HADDOCK_HOME',
+                   'HDOCKLITE_HOME',
+                   'MEGADOCK_HOME',
                    'INPUT_FILE',
                    'OUTPUT_PATH',
                    'DB_LOCATION',

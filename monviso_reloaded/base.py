@@ -2,6 +2,7 @@ from .database_parser import DatabaseParser
 from .gene import Gene
 from .input_parser import InputParser
 from .analyzer import Analyzer
+from .docker import Docker
 
 class HomologyModelRun:
     def __init__(self):
@@ -136,13 +137,11 @@ class HomologyModelRun:
         for gene in self.genes:
             gene.write_report()
             
-
 class AnalysisRun:
     def __init__(self):
         self.parameters = []
         self.genes = []
         self.input_parser = InputParser()
-        self.genes = []
         
     def load_input(self, argv) -> None:
         """Load user input from the command line and parameters file
@@ -166,3 +165,31 @@ class AnalysisRun:
         self.analyzer=Analyzer(self.pesto_home,self.output_path,
                                     self.genes,self.msms_home)
         
+
+class DockingRun:
+    def __init__(self):
+        self.parameters = []
+        self.genes = []
+        self.input_parser = InputParser()
+        
+    def load_input(self, argv) -> None:
+        """Load user input from the command line and parameters file
+         and save them as attributes.
+
+        :param argv: command line arguments
+        """
+        _, self.parameters = self.input_parser.load_input(argv)
+        self.haddock_home=self.parameters["HADDOCK_HOME"]
+        self.hdocklite_home=self.parameters["HDOCKLITE_HOME"]
+        self.megadock_home=self.parameters["MEGADOCK_HOME"]
+        self.output_path=self.parameters["OUTPUT_PATH"]
+
+    def load_genes_from_list(self) -> None:
+        """Parse the list of mutations and genes from the mutation_list file
+        and save the genes as attribute.
+        """
+        self.genes = self.input_parser.parse_input(self.parameters["INPUT_FILE"],expected_block_length=2)
+
+    def analysis(self) -> None:
+        self.docker=Docker(self.output_path,self.genes,self.haddock_home,self.hdocklite_home,self.megadock_home)
+        self.docker.run()

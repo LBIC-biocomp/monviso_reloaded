@@ -2,6 +2,8 @@ import sys
 
 from monviso_reloaded.base import HomologyModelRun
 from monviso_reloaded.base import AnalysisRun
+from monviso_reloaded.base import DockingRun
+
 
 def isoform(argv):
     run = HomologyModelRun()
@@ -37,6 +39,12 @@ def analysis(argv):
     run.load_genes_from_mutation_list()
     run.analysis()
 
+def dock(argv):
+    run = DockingRun()
+    run.load_input(argv[1:])
+    run.load_genes_from_list()
+    run.analysis()
+
 def unrecognized_command():
     print("The command was not recognized. The available commands are:")
     print(" - monviso isoform")
@@ -65,6 +73,9 @@ def main(argv=None):  # pragma no cover
             
         elif argv[0]=="sequence":
             sequence(argv)
+            
+        elif argv[0]=="dock":
+            dock(argv)
         else:
             unrecognized_command()
     else:

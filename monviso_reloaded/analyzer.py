@@ -32,8 +32,8 @@ class Analyzer:
         self.model = self.model.eval().to(self.device)
         
         self._findPDBfiles()
-        #self.runPestoAnalysis()
-        #self.runSasaAnalysis()
+        self.runPestoAnalysis()
+        self.runSasaAnalysis()
         self.runDepthAnalysis(msms_home)
     
 
@@ -127,6 +127,7 @@ class Analyzer:
                 
     def runDepthAnalysis(self,msms_home) -> None:
         p = PDBParser(QUIET=1)
+        os.system(f"cp {str(Path(msms_home,'atmtypenumbers'))} .")
         with FileHandler() as fh:
             for pdb in self.pdb_filepaths:
                 print("Calculating residue depth for file "+pdb+"...")
