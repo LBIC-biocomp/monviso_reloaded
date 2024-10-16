@@ -65,10 +65,10 @@ class Isoform:
             )
 
     def _check_hmmer_errors(self,possible_templates_string):
-        if "Error" in possible_templates_string:
-            print("The hmmsearch for a template resulted in a server error.")
-            print("Monviso will quit.")
-            quit()
+        if "data name=\"results\"" in possible_templates_string:
+            return True
+        else:
+            return False
 
     def blastp_search(self) -> None:
         """Use the isoform.fasta file saved in the directory
@@ -176,32 +176,40 @@ class Isoform:
                 f"{self.gene_name} {self.isoform_name}"
             )
             templates_path = Path(self.out_path, "possible_templates.xml")
+            
+            loaded_templates=False #Remains false, while the correct template list is not downloaded correctly
 
-            if not fh.check_existence(templates_path):
-                command = f"curl -L -H 'Expect:' -H \
-                    'Accept:text/xml' -F seqdb=pdb -F\
-                    seq='<{str(hmm_path)}' \
-                    https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
-                try:
+            while not loaded_templates:
+                if not fh.check_existence(templates_path):
+                    command = f"curl -L -H 'Expect:' -H \
+                        'Accept:text/xml' -F seqdb=pdb -F\
+                        seq='<{str(hmm_path)}' \
+                        https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
+                    try:
 
-                    result = subprocess.run(
-                        command,
-                        shell=True,
-                        universal_newlines=True,
-                        capture_output=True,
-                        check=True,
+                        result = subprocess.run(
+                            command,
+                            shell=True,
+                            universal_newlines=True,
+                            capture_output=True,
+                            check=True,
+                        )
+                        output = result.stdout  # Captured output as a string
+                        if self._check_hmmer_errors(output):
+                            fh.write_file(templates_path, output)
+                            loaded_templates=True
+                        else:
+                            print("HMMER search returned an error. Retrying...")
+
+                    except subprocess.CalledProcessError as e:
+                        print(f"Error executing curl command: {e}")
+                else:
+                    print(
+                        f"Templates file for {self.gene_name} "
+                        f"{self.isoform_name} esists. "
+                        "Skipping hmmsearch."
                     )
-                    output = result.stdout  # Captured output as a string
-                    self._check_hmmer_errors(output)
-                    fh.write_file(templates_path, output)
-                except subprocess.CalledProcessError as e:
-                    print(f"Error executing curl command: {e}")
-            else:
-                print(
-                    f"Templates file for {self.gene_name} "
-                    f"{self.isoform_name} esists. "
-                    "Skipping hmmsearch."
-                )
+                    loaded_templates=True
 
     def _extract_pdb_names(self, max_pdb: int) -> list:
         """Extact PDB names from the hmmsearch file found in
