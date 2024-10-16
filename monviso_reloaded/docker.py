@@ -62,12 +62,14 @@ class Docker:
                 fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"HADDOCK"))
     
     
-    def run_megadock(self):
+    def run_megadock(self,n_exported_structs=100):
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
                 for p2 in couple[1]:
                     directory_name=p1.gene+"-"+p2.gene
                     file_name=p1.name+"-"+p2.name
+                    file_name=file_name.replace(".pdb","")+".out"
+
                     output=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name)
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
@@ -75,3 +77,13 @@ class Docker:
                             subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                             )
+                    
+                        for i in range(n_exported_structs):
+                            exported_pdb=file_name.replace(".out",f".{i}.pdb")
+                            exported_pdb_path=Path(self.output_path,"Docked",directory_name,"MEGADOCK",exported_pdb)
+
+                            if not fh.check_existence(exported_pdb_path):
+                                command = f"{str(Path(self.megadock_home,'decoygen'))} {str(exported_pdb_path)} {p2.path} {str(output)} {i+1}"
+                                subprocess.run(
+                                command, shell=True, universal_newlines=True, check=True
+                                )
