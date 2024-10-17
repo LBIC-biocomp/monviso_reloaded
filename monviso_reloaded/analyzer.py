@@ -64,7 +64,7 @@ class Analyzer:
                 # concatenate all chains together
                 filenames= [filepath[:-4]+'_pesto_{}.pdb'.format(r) for r in results]
                 if sum([FileHandler().check_existence(file) for file in filenames])==len(filenames):
-                    tqdm.write(f"PeSTo analysis on {filepath} already performed. Skipping.")
+                    tqdm.write(f"PeSTo analysis on {Path(filepath).name} already performed. Skipping.")
                 else:
                     structure = concatenate_chains(subunits)
 
@@ -132,14 +132,14 @@ class Analyzer:
                     fh.write_file(residue_sasa_path,residue_sasa_string)
                     
                 else:
-                    tqdm.write(f"SASA already calculated for file {str(pdb)}. Skipping.")
+                    tqdm.write(f"SASA already calculated for {Path(pdb).name}. Skipping.")
                 
     def runDepthAnalysis(self,msms_home) -> None:
         p = PDBParser(QUIET=1)
-        os.system(f"cp {str(Path(msms_home,'atmtypenumbers'))} .")
         with FileHandler() as fh:
+            fh.copy_file(Path(msms_home,'atmtypenumbers'),os.getcwd())
             for pdb in tqdm(self.pdb_filepaths):
-                tqdm.write("Calculating residue depth for file "+pdb+"...")
+                tqdm.write("Calculating residue depth for "+pdb+"...")
                 residue_depth_path=Path(pdb.replace(".pdb",".residue.depth.csv"))
                 tmp_name=abs(hash(str(pdb)))
                 tmp_xyzr=Path("/tmp/",str(tmp_name)+".xyzr")
@@ -162,4 +162,5 @@ class Analyzer:
                     content="Residue depth\n"+"\n".join([str(x) for x in depths])
                     fh.write_file(residue_depth_path, content)
                 else:
-                    tqdm.write(f"Residue depth already calculated for file {str(pdb)}. Skipping.")
+                    tqdm.write(f"Residue depth already calculated for file {Path(pdb).name}. Skipping.")
+            fh.remove_file(Path(os.getcwd(),"atmtypenumbers"))
