@@ -62,92 +62,104 @@ class Analyzer:
         with pt.no_grad():
             for subunits, filepath in tqdm(self.dataset):
                 # concatenate all chains together
-                structure = concatenate_chains(subunits)
+                filenames= [filepath[:-4]+'_pesto_{}.pdb'.format(r) for r in results]
+                if sum([FileHandler().check_existence(file) for file in filenames])==len(filenames):
+                    tqdm.write(f"PeSTo analysis on {filepath} already performed. Skipping.")
+                else:
+                    structure = concatenate_chains(subunits)
 
-                # encode structure and features
-                X, M = encode_structure(structure) 
-                #q = pt.cat(encode_features(structure), dim=1)
-                q = encode_features(structure)[0] 
+                    # encode structure and features
+                    X, M = encode_structure(structure) 
+                    #q = pt.cat(encode_features(structure), dim=1)
+                    q = encode_features(structure)[0] 
 
-                # extract topology
-                ids_topk, _, _, _, _ = extract_topology(X, 64)
+                    # extract topology
+                    ids_topk, _, _, _, _ = extract_topology(X, 64)
 
-                # pack data and setup sink (IMPORTANT)
-                X, ids_topk, q, M = collate_batch_features([[X, ids_topk, q, M]]) 
+                    # pack data and setup sink (IMPORTANT)
+                    X, ids_topk, q, M = collate_batch_features([[X, ids_topk, q, M]]) 
 
-                # run model
-                z = self.model(X.to(self.device), ids_topk.to(self.device), q.to(self.device), M.float().to(self.device))
+                    # run model
+                    z = self.model(X.to(self.device), ids_topk.to(self.device), q.to(self.device), M.float().to(self.device))
 
-                # for all predictions
-                for i in range(z.shape[1]):
-                    # prediction
-                    p = pt.sigmoid(z[:,i])
+                    # for all predictions
+                    for i in range(z.shape[1]):
+                        # prediction
+                        p = pt.sigmoid(z[:,i])
 
-                    # encode result
-                    structure = encode_bfactor(structure, p.cpu().numpy())
+                        # encode result
+                        structure = encode_bfactor(structure, p.cpu().numpy())
 
-                    # save results
-                    output_filepath = filepath[:-4]+'_pesto_{}.pdb'.format(results[i])
-                    save_pdb(split_by_chain(structure), output_filepath)
-    
+                        # save results
+                        output_filepath = filepath[:-4]+'_pesto_{}.pdb'.format(results[i])
+                        save_pdb(split_by_chain(structure), output_filepath)
+        
     def runSasaAnalysis(self) -> None:
         p = PDBParser(QUIET=1)
         with FileHandler() as fh:
-            for pdb in self.pdb_filepaths:
+            print("Running SASA analysis.")
+            for pdb in tqdm(self.pdb_filepaths):
                 
                 struct_sasa_path=Path(pdb.replace(".pdb",".struct.sasa"))
                 residue_sasa_path=Path(pdb.replace(".pdb",".residue.sasa.csv"))
 
-                struct = p.get_structure("Protein", pdb)
-                sr = ShrakeRupley()
-                sr.compute(struct, level="S")
-                sr.compute(struct, level="R")
-                sr.compute(struct, level="A")
+                if not (fh.check_existence(struct_sasa_path) and fh.check_existence(residue_sasa_path)):
+                    struct = p.get_structure("Protein", pdb)
+                    sr = ShrakeRupley()
+                    sr.compute(struct, level="S")
+                    sr.compute(struct, level="R")
+                    sr.compute(struct, level="A")
 
-                struct_sasa_string=f"Strcuture SASA: {struct.sasa}"
-                fh.write_file(struct_sasa_path,struct_sasa_string)
-                
-                residue_sasa=[]
-                backbone_sasa=[]
-                sidechain_sasa=[]
-                
-                for res in struct.get_residues():
-                    residue_sasa.append(res.sasa)
-                    bb_atoms=[a for a in res.get_atoms() if a.name in ['C','N','CA','O']]
-                    sc_atoms=[a for a in res.get_atoms() if a.name not in ['C','N','CA','O']]
-                    backbone_sasa.append(sum([a.sasa for a in bb_atoms]))
-                    sidechain_sasa.append(sum([a.sasa for a in sc_atoms]))
+                    struct_sasa_string=f"Strcuture SASA: {struct.sasa}"
+                    fh.write_file(struct_sasa_path,struct_sasa_string)
                     
-                residue_sasa_string="Residue sasa, Backbone, Sidechain\n"
-                
-                for i,r in enumerate(residue_sasa):
-                    residue_sasa_string+=f"{r},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
-                
-                fh.write_file(residue_sasa_path,residue_sasa_string)
+                    residue_sasa=[]
+                    backbone_sasa=[]
+                    sidechain_sasa=[]
+                    
+                    for res in struct.get_residues():
+                        residue_sasa.append(res.sasa)
+                        bb_atoms=[a for a in res.get_atoms() if a.name in ['C','N','CA','O']]
+                        sc_atoms=[a for a in res.get_atoms() if a.name not in ['C','N','CA','O']]
+                        backbone_sasa.append(sum([a.sasa for a in bb_atoms]))
+                        sidechain_sasa.append(sum([a.sasa for a in sc_atoms]))
+                        
+                    residue_sasa_string="Residue sasa, Backbone, Sidechain\n"
+                    
+                    for i,r in enumerate(residue_sasa):
+                        residue_sasa_string+=f"{r},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
+                    
+                    fh.write_file(residue_sasa_path,residue_sasa_string)
+                    
+                else:
+                    tqdm.write(f"SASA already calculated for file {str(pdb)}. Skipping.")
                 
     def runDepthAnalysis(self,msms_home) -> None:
         p = PDBParser(QUIET=1)
         os.system(f"cp {str(Path(msms_home,'atmtypenumbers'))} .")
         with FileHandler() as fh:
-            for pdb in self.pdb_filepaths:
-                print("Calculating residue depth for file "+pdb+"...")
+            for pdb in tqdm(self.pdb_filepaths):
+                tqdm.write("Calculating residue depth for file "+pdb+"...")
                 residue_depth_path=Path(pdb.replace(".pdb",".residue.depth.csv"))
                 tmp_name=abs(hash(str(pdb)))
                 tmp_xyzr=Path("/tmp/",str(tmp_name)+".xyzr")
                 tmp_surf=Path("/tmp/",str(tmp_name)+".surf")
-                command=str(Path(msms_home,"pdb_to_xyzr"))+" "+str(pdb)+" > "+str(tmp_xyzr)
-                
-                result = subprocess.check_output(command,shell=True)
-                command=str(Path(msms_home+"/msms")) +" -if "+str(tmp_xyzr)+" -of "+str(tmp_surf)
-                result = subprocess.check_output(command,shell=True)
-                command="rm "+str(tmp_xyzr)
-                subprocess.check_output(command,shell=True)
-                surface=_read_vertex_array(str(tmp_surf)+".vert")
-                
-                structure=p.get_structure("protein",pdb)
-                depths=[]
-                for res in structure.get_residues():
-                    depths.append(residue_depth(res, surface))
-                
-                content="Residue depth\n"+"\n".join([str(x) for x in depths])
-                fh.write_file(residue_depth_path, content)
+                if not fh.check_existence(residue_depth_path):
+                    command=str(Path(msms_home,"pdb_to_xyzr"))+" "+str(pdb)+" > "+str(tmp_xyzr)
+                    
+                    result = subprocess.check_output(command,shell=True)
+                    command=str(Path(msms_home+"/msms")) +" -if "+str(tmp_xyzr)+" -of "+str(tmp_surf)
+                    result = subprocess.check_output(command,shell=True)
+                    command="rm "+str(tmp_xyzr)
+                    subprocess.check_output(command,shell=True)
+                    surface=_read_vertex_array(str(tmp_surf)+".vert")
+                    
+                    structure=p.get_structure("protein",pdb)
+                    depths=[]
+                    for res in structure.get_residues():
+                        depths.append(residue_depth(res, surface))
+                    
+                    content="Residue depth\n"+"\n".join([str(x) for x in depths])
+                    fh.write_file(residue_depth_path, content)
+                else:
+                    tqdm.write(f"Residue depth already calculated for file {str(pdb)}. Skipping.")
