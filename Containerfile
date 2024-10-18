@@ -118,10 +118,10 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
     gzip -d uniprot_sprot_varsplic.fasta.gz
 
 # Install Monviso using pip in the myenv environment
-RUN git clone https://github.com/LBIC-biocomp/monviso_reloaded
-RUN cd monviso_reloaded
-RUN /bin/bash -c "source activate myenv && pip install -e ."
-RUN cd ..
+#RUN git clone https://github.com/LBIC-biocomp/monviso_reloaded
+#RUN cd monviso_reloaded
+#RUN /bin/bash -c "source activate myenv && pip install -e ."
+#RUN cd ..
 
 #Install msms
 RUN curl -L 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz'
@@ -129,14 +129,10 @@ RUN mkdir -p msms && tar -xvf msms_i86_64Linux2_2.6.1.tar.gz -C msms &&\
 rm msms_i86_64Linux2_2.6.1.tar.gz &&\
 mv msms/msms.x86_64Linux2.2.6.1 msms/msms
 
-# Copy the HDockLite file or download from the URL and extract it
-RUN if echo "$HDOCKLITE_URL" | grep -q 'huanglab'; then \
-        curl -o /Monviso/HDOCKlite.tar.gz "$HDOCKLITE_URL" && \
-        tar -xzf /Monviso/HDOCKlite.tar.gz -C /Monviso; \
-    else \
-        cp "$HDOCKLITE_URL" /Monviso/HDOCKlite.tar.gz && \
-        tar -xzf /Monviso/HDOCKlite.tar.gz -C /Monviso; \
-    fi
+# Copy the HDockLite file and extract it
+COPY $HDOCKLITE_URL /Monviso/HDOCKlite.tar.gz
+RUN tar -xzf /Monviso/HDOCKlite.tar.gz -C /Monviso; 
+
 
 RUN echo "DB_LOCATION=/Monviso" > parameters.txt && \
     echo "MEGADOCK_HOME=/Monviso/MEGADOCK" >> parameters.txt && \
