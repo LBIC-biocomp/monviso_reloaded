@@ -34,6 +34,7 @@ class Docker:
         self.load_structures()
         self.make_folders()
         self.run_megadock()
+        self.run_hdocklite()
         
     def load_structures(self):
         """For each couple of genes in self.gene_list,
@@ -87,3 +88,29 @@ class Docker:
                                 subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                                 )
+    
+    def run_hdocklite(self,n_exported_structs=100):
+        for couple in self.coupled_structure_lists:
+            for p1 in couple[0]:
+                for p2 in couple[1]:
+                    directory_name=p1.gene+"-"+p2.gene
+                    file_name=p1.name+"-"+p2.name
+                    file_name=file_name.replace(".pdb","")+".out"
+
+                    output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name)
+                    with FileHandler() as fh:
+                        if not fh.check_existence(output):
+                            command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(output)}"
+                            subprocess.run(
+                                command, shell=True, universal_newlines=True, check=True
+                            )
+                    
+                        
+                        exported_pdb=file_name.replace(".out",f".top{n_exported_structs}.pdb")
+                        exported_pdb_path=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",exported_pdb)
+
+                        if not fh.check_existence(exported_pdb_path):
+                            command = f"{str(Path(self.hdocklite_home,'creapl'))} {str(output)} {str(exported_pdb_path)} -nmax {n_exported_structs} -complex -models"
+                            subprocess.run(
+                            command, shell=True, universal_newlines=True, check=True
+                            )
