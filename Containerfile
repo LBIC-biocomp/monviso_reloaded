@@ -11,7 +11,7 @@ RUN if [ -z "$HDOCKLITE_URL" ]; then \
     fi
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y wget build-essential git curl make g++ \
+RUN apt-get update && apt-get install -y wget build-essential git curl make g++ libfftw3-bin \
     nano cmake gfortran-9 flex csh
 RUN apt-get clean 
 RUN ln -s /usr/bin/gfortran-9 /usr/bin/gfortran
@@ -106,7 +106,10 @@ RUN export CNS=/Monviso/cns_solve && \
     sed -i 's/_CNSsolve_location_/\/Monviso\/cns_solve/g' $CNS/cns_solve_env && \
     chmod -R 777 /Monviso && \
     cd $CNS && \
-    make install compiler=gfortran
+    make install compiler=gfortran && \
+    cp -r /Monviso/cns_solve/intel-x86_64bit-linux/bin /Monviso/haddock3
+
+RUN /bin/bash -c "cd /Monviso/haddock3 && source activate myenv && pip install -e ."
 
 # Set the working directory
 WORKDIR /Monviso
@@ -117,11 +120,10 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
     gzip -d uniprot_sprot.fasta.gz && \
     gzip -d uniprot_sprot_varsplic.fasta.gz
 
-# Install Monviso using pip in the myenv environment
-#RUN git clone https://github.com/LBIC-biocomp/monviso_reloaded
-#RUN cd monviso_reloaded
-#RUN /bin/bash -c "source activate myenv && pip install -e ."
-#RUN cd ..
+#Install Monviso using pip in the myenv environment
+RUN git clone https://github.com/LBIC-biocomp/monviso_reloaded
+RUN /bin/bash -c "cd /Monviso/monviso_reloaded && conda run -n myenv pip install -e ."
+RUN cd /Monviso
 
 #Install msms
 RUN curl -L 'https://ccsb.scripps.edu/msms/download/933/' --output 'msms_i86_64Linux2_2.6.1.tar.gz'
