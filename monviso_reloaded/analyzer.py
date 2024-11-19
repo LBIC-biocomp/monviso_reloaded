@@ -113,21 +113,23 @@ class Analyzer:
                     struct_sasa_string=f"Strcuture SASA: {struct.sasa}"
                     fh.write_file(struct_sasa_path,struct_sasa_string)
                     
+                    residue_number=[]
                     residue_sasa=[]
                     backbone_sasa=[]
                     sidechain_sasa=[]
                     
                     for res in struct.get_residues():
+                        residue_number.append(res.id[1])
                         residue_sasa.append(res.sasa)
                         bb_atoms=[a for a in res.get_atoms() if a.name in ['C','N','CA','O']]
                         sc_atoms=[a for a in res.get_atoms() if a.name not in ['C','N','CA','O']]
                         backbone_sasa.append(sum([a.sasa for a in bb_atoms]))
                         sidechain_sasa.append(sum([a.sasa for a in sc_atoms]))
                         
-                    residue_sasa_string="Residue sasa, Backbone, Sidechain\n"
+                    residue_sasa_string="Residue number, Residue sasa, Backbone, Sidechain\n"
                     
-                    for i,r in enumerate(residue_sasa):
-                        residue_sasa_string+=f"{r},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
+                    for i,r in enumerate(residue_number):
+                        residue_sasa_string+=f"{r},{residue_sasa[i]},{backbone_sasa[i]},{sidechain_sasa[i]}\n"
                     
                     fh.write_file(residue_sasa_path,residue_sasa_string)
                     

@@ -252,6 +252,13 @@ class Isoform:
             where executables are stored.
             redo: True if part of the scoring cycle. Alignment can be re-written
         """
+        
+        #Check if there are any templates
+        if len(self.templates)==0:
+            self.modellable=False
+            print(f"No templates for {self.gene_name} {self.isoform_name}")
+            return False
+
         content = ">" + self.gene_name + " " + self.isoform_name + "\n"
         content += "".join(self.sequence) + "\n"
         for template in self.templates:
@@ -272,6 +279,13 @@ class Isoform:
             else:
                 with Cobalt() as cobalt:
                     cobalt.run(templates_path, aligned_path, cobalt_home)
+                    
+                    #Check size of templates alignment
+                    content=fh.read_file(aligned_path)
+                    if len(content)==0:
+                        fh.remove_file(aligned_path)
+                        raise RuntimeError(f"The Cobalt run of {self.gene_name} returned and empty file.")
+                    
                     print(
                         f"Cobalt alignment for {self.gene_name}"
                         f" {self.isoform_name} templates done."

@@ -1,9 +1,11 @@
 # Use Ubuntu as the base image
-FROM ubuntu:latest
+FROM ubuntu:focal
+
 
 # Define a build argument for the HDocklite files
 ARG HDOCKLITE_URL
 ENV HDOCKLITE_URL=$HDOCKLITE_URL
+ENV DEBIAN_FRONTEND=noninteractive
 # Fail the build if the archive URL or path is not provided
 RUN if [ -z "$HDOCKLITE_URL" ]; then \
         echo "Error: HDOCKLITE_URL not provided"; \
@@ -97,6 +99,7 @@ RUN git clone --recursive https://github.com/haddocking/haddock3.git /Monviso/ha
 RUN git clone --recursive https://github.com/colbyford/HADDOCKer.git /tmp/HADDOCKer
 RUN mv /tmp/HADDOCKer/HADDOCK3/cns_solve_1.3_all_intel-mac_linux.tar.gz /Monviso
 
+
 ## Note: The custom cns1.3 files are from the HADDOCK3 repo under "varia"
 RUN export CNS=/Monviso/cns_solve && \
     tar -xzf /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz -C /Monviso/&& \
@@ -107,7 +110,9 @@ RUN export CNS=/Monviso/cns_solve && \
     chmod -R 777 /Monviso && \
     cd $CNS && \
     make install compiler=gfortran && \
-    cp -r /Monviso/cns_solve/intel-x86_64bit-linux/bin /Monviso/haddock3
+    #cp -r /Monviso/cns_solve/intel-x86_64bit-linux/bin /Monviso/haddock3
+    mkdir /Monviso/haddock3/bin \
+    cp $CNS/intel-x86_64bit-linux/source/*exe /Monviso/haddock3/bin/cns
 
 RUN /bin/bash -c "cd /Monviso/haddock3 && source activate myenv && pip install -e ."
 

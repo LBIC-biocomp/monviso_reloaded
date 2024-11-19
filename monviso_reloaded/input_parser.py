@@ -282,13 +282,15 @@ class InputParser(argparse.ArgumentParser):
                 if len(splitline)<1:
                     raise ValueError('While reading the sequence metadata, not enough information was found.'
                                      '\nThe first line must start with ">" and include at least a protein name'
-                                     ' and a sequence name separated by ";".'
+                                     ' and a sequence name separated by ":".'
                                      f"The line that led to the error is: {line}")
                 if len(splitline)>3:
                     raise ValueError('Too many columns (:) in the file.'
                                      f"The line that led to the error is: {line}")
                 if len(splitline)==3:
                     splitline[2]=[mutation.replace(" ","") for mutation in splitline[2].split(",")]
+                if len(splitline)==2:
+                    splitline.append([])
                     
                 parsed_sequences.append([splitline])            
             else:

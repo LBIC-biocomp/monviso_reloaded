@@ -1,6 +1,7 @@
 from pathlib import Path
 from .file_handler import FileHandler
 import subprocess
+import pandas as pd
 
 class DockableStructure:
     def __init__(self, gene, path):
@@ -21,8 +22,60 @@ class DockableStructure:
             pass
         else:
             raise FileNotFoundError(f"Pesto and residues analysis was not completed for gene {self.gene}.")
+        
+        self.residuesasa_db=pd.read_csv(self.residuesasa)
+        
+    def change_path(self,path_to: Path):
+        with FileHandler() as fh:
+            fh.copy_file(self.path,Path(path_to,self.name))
+            self.path=Path(path_to,self.name)
+    
+    def write_sasa_residues(self, output_path):
+        pass
+            
+class HaddockManager:
+    def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path):
+        self.protein1=protein1
+        self.protein2=protein2
+        self.output=output
+        self.default_config="""# directory name of the run
+run_dir = "$runname$"
 
-class Docker:
+# compute mode
+mode = "local"
+
+
+# Self contained rundir (to avoid problems with long filename paths)
+self_contained = true
+
+# molecules to be docked
+molecules =  [ $moleculesname$ ]
+
+[topoaa]
+
+[rigidbody]
+# CDR to surface ambig restraints
+ambig_fname = "$ambigfilename$"
+# Restraints to keep the antibody chains together
+unambig_fname = "$unambigfilename$"
+# Number of models to generate
+sampling = 100
+
+[seletopclusts]
+## select the best 10 models of each cluster
+top_models = 10
+"""
+    def copy_structures(self):
+        """Copy the pdb structure of the two proteins in the docking folder.
+        Change the chain of the second protein from "A" to "B".
+        """
+        self.protein1.change_path(self.output)
+        self.protein2.change_path(self.output)
+        
+    def find_most_exposed_residues(self):
+        pass
+
+class DockingManager:
     def __init__(self,output_path,gene_list,haddock_home,hdocklite_home,megadock_home):
         self.output_path=Path(output_path)  
         self.gene_list=gene_list
@@ -114,3 +167,19 @@ class Docker:
                             subprocess.run(
                             command, shell=True, universal_newlines=True, check=True
                             )
+    
+    def run_haddock(self):
+        hm= HaddockManager()
+        for couple in self.coupled_structure_lists:
+            for p1 in couple[0]:
+                for p2 in couple[1]:
+                    directory_name=p1.gene+"-"+p2.gene
+                    file_name=p1.name+"-"+p2.name
+                    file_name=file_name.replace(".pdb","")+"_run"
+
+                    output=Path(self.output_path,"Docked",directory_name,"HADDOCK",file_name)
+                    with FileHandler() as fh:
+                        if not fh.check_existence(output):
+                            configfile=hm.createConfig()
+                            hm.run(configfile)
+                    

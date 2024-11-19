@@ -2,7 +2,7 @@ from .database_parser import DatabaseParser
 from .gene import Gene
 from .input_parser import InputParser
 from .analyzer import Analyzer
-from .docker import Docker
+from .docker import DockingManager
 
 class HomologyModelRun:
     def __init__(self):
@@ -191,5 +191,5 @@ class DockingRun:
         self.genes = self.input_parser.parse_input(self.parameters["INPUT_FILE"],expected_block_length=2)
 
     def analysis(self) -> None:
-        self.docker=Docker(self.output_path,self.genes,self.haddock_home,self.hdocklite_home,self.megadock_home)
+        self.docker=DockingManager(self.output_path,self.genes,self.haddock_home,self.hdocklite_home,self.megadock_home)
         self.docker.run()
