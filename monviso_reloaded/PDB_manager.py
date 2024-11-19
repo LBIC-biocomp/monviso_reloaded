@@ -85,7 +85,7 @@ class PDB_manager:
             if fh.check_existence(filepath):
                 return filepath
             else:
-                pdbl = PDBList()
+                pdbl = PDBList(server='https://files.wwpdb.org')
                 filename = pdbl.retrieve_pdb_file(
                     pdb,
                     pdir=str(Path(out_path, download_dir)),
@@ -99,8 +99,7 @@ class PDB_manager:
                         Path(out_path, download_dir, wrong_pdbname), filepath
                     )
                     return filepath
-                else:
-                    RuntimeWarning(f"Could not download PDB {pdb}. Now trying to find the mmCIF format...")
+                
                 filepath = Path(out_path, download_dir, right_pdbname.replace("pdb","cif"))
                 filename = pdbl.retrieve_pdb_file(
                     pdb,
@@ -115,7 +114,7 @@ class PDB_manager:
                     )
                     return filepath
                 else:
-                    RuntimeWarning(f"Could not download mmCIF either. Structure {pdb} not found.")
+                    RuntimeWarning(f"Could not download structure with ID {pdb}.")
 
                 return False
 
@@ -183,7 +182,7 @@ class PDB_manager:
 
         print(
             f"The file {str(input_pdb_path)} was "
-            + "exluded due to poor resolution."
+            + "excluded due to poor resolution."
         )
         return 9999
 
