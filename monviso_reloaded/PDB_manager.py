@@ -8,9 +8,8 @@ from .file_handler import FileHandler
 
 
 class ChainSelection(Select):
-    def __init__(self, chain_letters, standard_atoms=True):
+    def __init__(self, chain_letters):
         self.chain_letters = chain_letters.upper()
-        self.standard_atoms = standard_atoms
         self.standard_residues = [
             "ALA",
             "ARG",
@@ -33,6 +32,38 @@ class ChainSelection(Select):
             "TYR",
             "VAL",
         ]
+        
+        self.standard_atoms=['C',
+                             'CA',
+                             'CB',
+                             'CD',
+                             'CD1',
+                             'CD2',
+                             'CE',
+                             'CE1',
+                             'CE2',
+                             'CG',
+                             'CG1',
+                             'CG2',
+                             'CZ',
+                             'N',
+                             'ND1',
+                             'ND2',
+                             'NE',
+                             'NE2',
+                             'NH1',
+                             'NH2',
+                             'NZ',
+                             'O',
+                             'OD1',
+                             'OD2',
+                             'OE1',
+                             'OE2',
+                             'OG',
+                             'OG1',
+                             'OH',
+                             'SD',
+                             'SG']
 
         self.first_model = True  # see accet_model method
 
@@ -53,13 +84,11 @@ class ChainSelection(Select):
 
     def accept_chain(self, chain):
         # Filter the chain
-        return chain.id == self.chain_letters
+        return (chain.id.upper() == self.chain_letters)
 
     def accept_atom(self, atom):
-        # Filter for standard atoms if requested
-        if self.standard_atoms:
-            return True
-        return False
+        # Filter for standard atoms
+        return atom.name.strip() in self.standard_atoms
 
 
 class PDB_manager:
@@ -73,8 +102,7 @@ class PDB_manager:
         pass
 
     def downloadPDB(self, pdb: str, out_path: Union[str, Path]) -> Path:
-        right_pdbname = f"{pdb}.pdb"
-        wrong_pdbname = f"pdb{pdb}.ent"
+        right_pdbname = f"{pdb}.cif"
         download_dir = ".pdbdownloads"
 
         filepath = Path(out_path, download_dir, right_pdbname)
@@ -86,21 +114,6 @@ class PDB_manager:
                 return filepath
             else:
                 pdbl = PDBList(server='https://files.wwpdb.org')
-                filename = pdbl.retrieve_pdb_file(
-                    pdb,
-                    pdir=str(Path(out_path, download_dir)),
-                    file_format="pdb",
-                    overwrite=True,
-                    obsolete=False
-                )
-
-                if fh.check_existence(filename):
-                    fh.move_file(
-                        Path(out_path, download_dir, wrong_pdbname), filepath
-                    )
-                    return filepath
-                
-                filepath = Path(out_path, download_dir, right_pdbname.replace("pdb","cif"))
                 filename = pdbl.retrieve_pdb_file(
                     pdb,
                     pdir=str(Path(out_path, download_dir)),
@@ -144,11 +157,24 @@ class PDB_manager:
         """
         if str(input_pdb_path).endswith("pdb"):
             parser = PDBParser(QUIET=True)
-        else:
-            parser = MMCIFParser()
-        structure = parser.get_structure("structure", str(input_pdb_path))
-        if structure.header["resolution"]:
-            if structure.header["resolution"] <= resolution_cutoff:
+            structure = parser.get_structure("structure", str(input_pdb_path))
+            resolution = structure.header.get("resolution", None)
+        else:  # Assume CIF format
+            parser = MMCIFParser(QUIET=True)
+            structure = parser.get_structure("structure", str(input_pdb_path))
+            resolution = None
+            if "_refine.ls_d_res_high" in parser._mmcif_dict:
+                try:
+                    resolution = float(parser._mmcif_dict["_refine.ls_d_res_high"][0])
+                except ValueError:
+                    pass  # Resolution could not be converted to a float
+            if "_em_3d_reconstruction.resolution" in parser._mmcif_dict:
+                try:
+                    resolution = float(parser._mmcif_dict["_em_3d_reconstruction.resolution"][0])
+                except ValueError:
+                    pass  # Resolution could not be converted to a float
+        if resolution:
+            if resolution <= resolution_cutoff:
                 with FileHandler() as fh:
                     io = PDBIO()
                     io.set_structure(structure)
@@ -158,12 +184,12 @@ class PDB_manager:
                         )
 
                     # remove HETATM from saved file
-                    saved_file = fh.read_file(output_pdb_path).splitlines()
-                    saved_file = "\n".join(
-                        [line for line in saved_file if "HETATM" not in line]
-                    )
-                    fh.write_file(output_pdb_path, saved_file)
-                    return structure.header["resolution"]
+                    #saved_file = fh.read_file(output_pdb_path).splitlines()
+                    #saved_file = "\n".join(
+                    #    [line for line in saved_file if "HETATM" not in line]
+                    #)
+                    #fh.write_file(output_pdb_path, saved_file)
+            return resolution
 
         else:
             # The content of the following "if" cleans the NMR structures
@@ -220,3 +246,25 @@ class PDB_manager:
             if not fh.check_existence:
                 fh.write_file(output_fasta_path, content)
             return sequence
+
+    def change_chain_and_save(self, input_path, chain_name, output_path):
+            """
+            Load a PDB file, change all chain identifiers to the specified chain_name, and save it.
+
+            Parameters:
+            - input_path: Path to the input PDB file.
+            - chain_name: Single-letter string for the new chain identifier.
+            - output_path: Path to save the modified PDB file.
+            """
+            # Load the structure
+            parser = PDBParser(QUIET=True)
+            io = PDBIO()
+            structure = parser.get_structure('structure', input_path)
+
+            # Modify the chain identifiers
+            for model in structure:
+                for chain in model:
+                    chain.id = chain_name  # Change chain identifier
+
+            io.set_structure(structure)
+            io.save(output_path, ChainSelection(chain_name))

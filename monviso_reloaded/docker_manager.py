@@ -1,7 +1,10 @@
 from pathlib import Path
-from .file_handler import FileHandler
 import subprocess
 import pandas as pd
+import os
+
+from .file_handler import FileHandler
+from .PDB_manager import PDB_manager
 
 class DockableStructure:
     def __init__(self, gene, path):
@@ -22,49 +25,79 @@ class DockableStructure:
             pass
         else:
             raise FileNotFoundError(f"Pesto and residues analysis was not completed for gene {self.gene}.")
-        
-        self.residuesasa_db=pd.read_csv(self.residuesasa)
-        
-    def change_path(self,path_to: Path):
-        with FileHandler() as fh:
-            fh.copy_file(self.path,Path(path_to,self.name))
-            self.path=Path(path_to,self.name)
+                
+    def change_path(self,path_to: Path,new_chain_name="A"):
+        with PDB_manager() as pm:
+            pm.change_chain_and_save(str(self.path),new_chain_name,str(path_to))
+
     
     def write_sasa_residues(self, output_path):
-        pass
+        "Writes residues in the top10% percentile for absolute SASA."
+        self.residuesasa_db=pd.read_csv(self.residuesasa)
+        top10threshold=self.residuesasa_db[' Residue sasa'].quantile(0.90)
+        topresidues=list(self.residuesasa_db[self.residuesasa_db[' Residue sasa']>top10threshold]["Residue number"])
+        output_string=",".join([str(x) for x in topresidues])+"\n"
+        with FileHandler() as fh:
+            fh.write_file(output_path,output_string)
+    
+    def write_pesto_residues(self, output_path):
+        "Writes residues in the top10% percentile for PeSTo predicted score.."
+        with FileHandler() as fh:
+            pestofile=fh.read_file(self.pestoprotein).split("\n")
+            CAs=[line for line in pestofile if "CA" in line]
+            resnums=[line[22:26] for line in CAs]
+            scores=[line[62:66] for line in CAs]
+            df=pd.DataFrame(zip(resnums, scores),columns=["Residue number","PeSTo score"])
+            threshold=df["PeSTo score"].map(float).quantile(0.9)
+            selection=df[df["PeSTo score"].map(float)>threshold]
+            output_string=",".join(list(selection["Residue number"]))
+            fh.write_file(output_path,output_string)
+
             
 class HaddockManager:
     def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path):
         self.protein1=protein1
         self.protein2=protein2
         self.output=output
-        self.default_config="""# directory name of the run
-run_dir = "$runname$"
+        self.default_config="""
+# directory name of the run
+run_dir = "run"
 
 # compute mode
 mode = "local"
+#  5 nodes x 50 tasks = 250
+ncores = 250
 
-
-# Self contained rundir (to avoid problems with long filename paths)
+# Self contained rundir
 self_contained = true
 
-# molecules to be docked
-molecules =  [ $moleculesname$ ]
+# Post-processing to generate statistics and plots
+postprocess = true
 
+# Cleaninog
+clean = true
+
+# molecules to be docked
+molecules =  [
+	"$molecule1",
+    "$molecule2"
+    ]
+
+# ====================================================================
+# Parameters for each stage are defined below, prefer full paths
+# ====================================================================
 [topoaa]
 
 [rigidbody]
-# CDR to surface ambig restraints
-ambig_fname = "$ambigfilename$"
-# Restraints to keep the antibody chains together
-unambig_fname = "$unambigfilename$"
+# paratope to surface ambig restraints
+ambig_fname = "$ambig_restraints"
+# Turn off ramdom removal of restraints
+randremoval = false
 # Number of models to generate
-sampling = 100
+sampling = 1000
 
-[seletopclusts]
-## select the best 10 models of each cluster
-top_models = 10
 """
+
     def copy_structures(self):
         """Copy the pdb structure of the two proteins in the docking folder.
         Change the chain of the second protein from "A" to "B".
@@ -72,8 +105,41 @@ top_models = 10
         self.protein1.change_path(self.output)
         self.protein2.change_path(self.output)
         
-    def find_most_exposed_residues(self):
-        pass
+    
+    def generate_tbl(self, residue_path1, residue_path2, output_path, chain1="A",chain2="B"):
+        with FileHandler() as fh:
+            res1=fh.read_file(residue_path1).split(",")
+            res2=fh.read_file(residue_path2).split(",")
+            
+            output_string=""
+            
+            r1selections=[f"(resid {r1} and segid {chain1})" for r1 in res1]
+            r2selections=[f"(resid {r2} and segid {chain2})" for r2 in res2]
+            
+            for i,r1 in enumerate(r1selections):
+                output_string+="\nassign "+r1+"\n(\n"
+                output_string+="\nor\n".join(r2selections)
+                output_string+=")  2.0 2.0 0.0"
+            
+            fh.write_file(output_path,output_string)
+            
+    def generate_config(self, protein1: DockableStructure, protein2: DockableStructure, tbl_path: Path, output_path: Path):
+        output_string=self.default_config
+        output_string=output_string.replace("$molecule1",protein1.path.name)
+        output_string=output_string.replace("$molecule2",protein2.path.name)
+        output_string=output_string.replace("$ambig_restraints",tbl_path.name)
+
+        with FileHandler() as fh:
+            fh.write_file(output_path,output_string)
+            
+    def run(self, config_path: Path):
+        cwd=os.getcwd()
+        os.chdir(config_path.parent)
+        
+        command = f"haddock3 {config_path.name}"
+        subprocess.run(command, shell=True, universal_newlines=True, check=True)
+        os.chdir(cwd)
+        
 
 class DockingManager:
     def __init__(self,output_path,gene_list,haddock_home,hdocklite_home,megadock_home):
@@ -88,6 +154,7 @@ class DockingManager:
         self.make_folders()
         self.run_megadock()
         self.run_hdocklite()
+        self.run_haddock()
         
     def load_structures(self):
         """For each couple of genes in self.gene_list,
@@ -150,36 +217,64 @@ class DockingManager:
                     file_name=p1.name+"-"+p2.name
                     file_name=file_name.replace(".pdb","")+".out"
 
+                    tmp_output=Path("/tmp/",file_name)
                     output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name)
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
-                            command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(output)}"
+                            command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(tmp_output)}"
                             subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                             )
+                            fh.move_file(tmp_output,output)
                     
                         
                         exported_pdb=file_name.replace(".out",f".top{n_exported_structs}.pdb")
                         exported_pdb_path=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",exported_pdb)
 
                         if not fh.check_existence(exported_pdb_path):
-                            command = f"{str(Path(self.hdocklite_home,'creapl'))} {str(output)} {str(exported_pdb_path)} -nmax {n_exported_structs} -complex -models"
+                            command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} {str(exported_pdb_path)} -nmax {n_exported_structs} -complex -models"
                             subprocess.run(
                             command, shell=True, universal_newlines=True, check=True
                             )
     
     def run_haddock(self):
-        hm= HaddockManager()
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
                 for p2 in couple[1]:
                     directory_name=p1.gene+"-"+p2.gene
                     file_name=p1.name+"-"+p2.name
                     file_name=file_name.replace(".pdb","")+"_run"
-
+                    
                     output=Path(self.output_path,"Docked",directory_name,"HADDOCK",file_name)
+
+                    
+                    sasa_res1=Path(output,p1.name+"_sasa_residues.txt")
+                    pesto_res1=Path(output,p1.name+"_pesto_residues.txt")
+                    sasa_res2=Path(output,p2.name+"_sasa_residues.txt")
+                    pesto_res2=Path(output,p2.name+"_pesto_residues.txt")
+                    
+                    sasa_ambig=Path(output,"sasa_ambig.tbl")
+                    pesto_ambig=Path(output,"pesto_ambig.tbl")
+                    config_path=Path(output,"docking.cfg")
+
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
-                            configfile=hm.createConfig()
-                            hm.run(configfile)
-                    
+                            fh.create_directory(output)
+                            hm= HaddockManager(p1,p2,output)
+                            #configfile=hm.createConfig()
+                            p1.write_sasa_residues(sasa_res1)
+                            p1.write_pesto_residues(pesto_res1)
+                            p2.write_sasa_residues(sasa_res2)
+                            p2.write_pesto_residues(pesto_res2)
+                            p1.change_path(Path(output,p1.name),"A")
+                            p2.change_path(Path(output,p2.name),"B")
+                            
+                            hm.generate_tbl(sasa_res1,sasa_res2,sasa_ambig)
+                            hm.generate_tbl(pesto_res1,pesto_res2,pesto_ambig)
+                            
+                            hm.generate_config(p1,p2,pesto_ambig,config_path)
+                            hm.run(config_path)
+                        
+                        else:
+                            print("Skipping Haddock job. Folder already exists.")
+                            

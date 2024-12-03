@@ -2,7 +2,7 @@ from .database_parser import DatabaseParser
 from .gene import Gene
 from .input_parser import InputParser
 from .analyzer import Analyzer
-from .docker import DockingManager
+from .docker_manager import DockingManager
 
 class HomologyModelRun:
     def __init__(self):

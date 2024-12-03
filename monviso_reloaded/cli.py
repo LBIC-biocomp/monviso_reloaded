@@ -50,6 +50,7 @@ def unrecognized_command():
     print(" - monviso isoform")
     print(" - monviso sequence")
     print(" - monviso analysis")
+    print(" - monviso dock")
     print("append \"--help\" at the end to receive help on the tool.")
     
 def main(argv=None):  # pragma no cover
