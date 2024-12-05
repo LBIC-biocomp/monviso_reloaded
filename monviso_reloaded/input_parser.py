@@ -56,6 +56,23 @@ class InputParser(argparse.ArgumentParser):
         )
         
         super().add_argument(
+            "-hdksel",
+            "--haddock_selection",
+            help="Analysis tool used to select residues for haddock protein protein docking. Either pesto or sasa.",
+            type=str,
+            required=False,
+        )
+        
+        super().add_argument(
+            "-hdkctf",
+            "--haddock_cutoff",
+            help="Percentage of residues excluded by the selection.",
+            type=str,
+            required=False,
+        )
+        
+        
+        super().add_argument(
             "-hdl",
             "--hdocklite_home",
             help="path to the directory containing the\
@@ -323,6 +340,8 @@ class InputParser(argparse.ArgumentParser):
             "PDB_TO_USE": None,
             "PESTO_HOME": None,
             "HADDOCK_HOME": None,
+            "HADDOCK_SELECTION":None,
+            "HADDOCK_CUTOFF":None,
             "HDOCKLITE_HOME": None,
             "MEGADOCK_HOME": None,
             "INPUT_FILE": None,
@@ -367,6 +386,8 @@ class InputParser(argparse.ArgumentParser):
             "PDB_TO_USE": args.max_pdb_templates,
             "PESTO_HOME":args.pesto_home,
             "HADDOCK_HOME":args.haddock_home,
+            "HADDOCK_SELECTION":args.haddock_selection,
+            "HADDOCK_CUTOFF":args.haddock_cutoff,
             "HDOCKLITE_HOME":args.hdocklite_home,
             "MEGADOCK_HOME":args.megadock_home,
             "OUTPUT_PATH":args.out_path,
@@ -394,6 +415,8 @@ class InputParser(argparse.ArgumentParser):
               args.max_pdb_templates,
               args.pesto_home,
               args.haddock_home,
+              args.haddock_selection,
+              args.haddock_cutoff,
               args.hdocklite_home,
               args.megadock_home,
               args.input_file,
@@ -415,6 +438,8 @@ class InputParser(argparse.ArgumentParser):
                    'PDB_TO_USE',
                    'PESTO_HOME',
                    'HADDOCK_HOME',
+                   'HADDOCK_SELECTION',
+                   'HADDOCK_CUTOFF',
                    'HDOCKLITE_HOME',
                    'MEGADOCK_HOME',
                    'INPUT_FILE',
@@ -461,6 +486,9 @@ class InputParser(argparse.ArgumentParser):
             f"COBALT: {parameters['COBALT_HOME']}\n"
             f"PESTO: {parameters['PESTO_HOME']}\n"
             f"HMMER: {parameters['HMMER_HOME']}\n"
+            f"HADDOCK: {parameters['HADDOCK_HOME']}\n"
+            f"HDOCKLITE: {parameters['HDOCKLITE_HOME']}\n"
+            f"MEGADOCK: {parameters['MEGADOCK_HOME']}\n"
             f"WEIGHT STRUCTURAL SCORE: {parameters['W_STRUCT']}\n"
             f"WEIGHT MUTATION SCORE: {parameters['W_MUT']}\n"
             f"MODELLER EXECUTABLE: {parameters['MODELLER_EXEC']}"

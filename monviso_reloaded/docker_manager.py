@@ -11,7 +11,11 @@ class DockableStructure:
         self.gene=gene
         self.path=path
         self.name=path.name
+        self.cutoff=90
         self._load_analysis_files()
+    
+    def set_cutoff(self,c):
+        self.cutoff=float(c)
     
     def _load_analysis_files(self):
         self.pestoprotein=Path(str(self.path).replace(".pdb","_pesto_Protein.pdb"))
@@ -34,7 +38,8 @@ class DockableStructure:
     def write_sasa_residues(self, output_path):
         "Writes residues in the top10% percentile for absolute SASA."
         self.residuesasa_db=pd.read_csv(self.residuesasa)
-        top10threshold=self.residuesasa_db[' Residue sasa'].quantile(0.90)
+        cutoff=(100-self.cutoff)/100
+        top10threshold=self.residuesasa_db[' Residue sasa'].quantile(cutoff)
         topresidues=list(self.residuesasa_db[self.residuesasa_db[' Residue sasa']>top10threshold]["Residue number"])
         output_string=",".join([str(x) for x in topresidues])+"\n"
         with FileHandler() as fh:
@@ -55,10 +60,14 @@ class DockableStructure:
 
             
 class HaddockManager:
-    def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path):
+    def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path, haddock_selection: str, haddock_cutoff: float):
         self.protein1=protein1
+        self.protein1.set_cutoff(haddock_cutoff)
         self.protein2=protein2
+        self.protein2.set_cutoff(haddock_cutoff)
         self.output=output
+        self.haddock_selection=haddock_selection
+        self.haddock_cutoff=haddock_cutoff
         self.default_config="""
 # directory name of the run
 run_dir = "run"
@@ -142,10 +151,12 @@ sampling = 1000
         
 
 class DockingManager:
-    def __init__(self,output_path,gene_list,haddock_home,hdocklite_home,megadock_home):
+    def __init__(self,output_path,gene_list,haddock_home,haddock_selection,haddock_cutoff,hdocklite_home,megadock_home):
         self.output_path=Path(output_path)  
         self.gene_list=gene_list
         self.haddock_home=haddock_home
+        self.haddock_selection=haddock_selection
+        self.haddock_cutoff=haddock_cutoff
         self.hdocklite_home=hdocklite_home
         self.megadock_home=megadock_home
         
@@ -260,7 +271,7 @@ class DockingManager:
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
                             fh.create_directory(output)
-                            hm= HaddockManager(p1,p2,output)
+                            hm= HaddockManager(p1,p2,output,self.haddock_selection, self.haddock_cutoff)
                             #configfile=hm.createConfig()
                             p1.write_sasa_residues(sasa_res1)
                             p1.write_pesto_residues(pesto_res1)
@@ -271,8 +282,13 @@ class DockingManager:
                             
                             hm.generate_tbl(sasa_res1,sasa_res2,sasa_ambig)
                             hm.generate_tbl(pesto_res1,pesto_res2,pesto_ambig)
-                            
-                            hm.generate_config(p1,p2,pesto_ambig,config_path)
+                            if self.haddock_selection=="pesto":
+                                tbl_path=pesto_ambig
+                            elif self.haddock_selection=="sasa":
+                                tbl_path=sasa_ambig
+                            else:
+                                raise ValueError("The haddock selection type was not defined correctly. Use \"pesto\" or \"sasa\", without quotes.")
+                            hm.generate_config(p1,p2,tbl_path,config_path)
                             hm.run(config_path)
                         
                         else:

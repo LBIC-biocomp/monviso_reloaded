@@ -180,6 +180,8 @@ class DockingRun:
         """
         _, self.parameters = self.input_parser.load_input(argv)
         self.haddock_home=self.parameters["HADDOCK_HOME"]
+        self.haddock_selection=self.parameters["HADDOCK_SELECTION"]
+        self.haddock_cutoff=self.parameters["HADDOCK_CUTOFF"]
         self.hdocklite_home=self.parameters["HDOCKLITE_HOME"]
         self.megadock_home=self.parameters["MEGADOCK_HOME"]
         self.output_path=self.parameters["OUTPUT_PATH"]
@@ -191,5 +193,5 @@ class DockingRun:
         self.genes = self.input_parser.parse_input(self.parameters["INPUT_FILE"],expected_block_length=2)
 
     def analysis(self) -> None:
-        self.docker=DockingManager(self.output_path,self.genes,self.haddock_home,self.hdocklite_home,self.megadock_home)
+        self.docker=DockingManager(self.output_path,self.genes,self.haddock_home,self.haddock_selection,self.haddock_cutoff,self.hdocklite_home,self.megadock_home)
         self.docker.run()
