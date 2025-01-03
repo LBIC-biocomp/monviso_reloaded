@@ -261,6 +261,10 @@ class Isoform:
 
         content = ">" + self.gene_name + " " + self.isoform_name + "\n"
         content += "".join(self.sequence) + "\n"
+        
+        self.templates = [template for template in self.templates if len(template.sequence)>1] # Remove empty templates
+        
+
         for template in self.templates:
             content += (
                 ">" + template.pdb_name + "_" + template.pdb_chain + "\n"
