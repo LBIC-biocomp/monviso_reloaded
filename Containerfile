@@ -112,7 +112,7 @@ RUN export CNS=/Monviso/cns_solve && \
     make install compiler=gfortran && \
     #cp -r /Monviso/cns_solve/intel-x86_64bit-linux/bin /Monviso/haddock3
     mkdir /Monviso/haddock3/bin \
-    cp $CNS/intel-x86_64bit-linux/source/*exe /Monviso/haddock3/bin/cns
+    cp $CNS/intel-x86_64bit-linux/source/bin/cns /Monviso/haddock3/bin/cns
 
 RUN /bin/bash -c "cd /Monviso/haddock3 && source activate myenv && pip install -e ."
 
