@@ -195,7 +195,7 @@ class PDB_manager:
             # The content of the following "if" cleans the NMR structures
             # But it's still missing an estimate of the reolution. Therefore
             # these structures will be cleaned, and included in all cases..
-            if "nmr" in structure.header["structure_method"]:
+            if "NMR" in structure.header["structure_method"].upper():
                 with FileHandler() as fh:
                     io = PDBIO()
                     io.set_structure(structure)

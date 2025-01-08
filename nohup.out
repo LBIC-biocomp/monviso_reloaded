@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/work/simone/Monviso/monviso_reloaded/.venv/bin/monviso", line 8, in <module>
+    sys.exit(main())
+  File "/work/simone/Monviso/monviso_reloaded/monviso_reloaded/cli.py", line 70, in main
+    isoform(argv)
+  File "/work/simone/Monviso/monviso_reloaded/monviso_reloaded/cli.py", line 10, in isoform
+    run.load_input(argv[1:])
+  File "/work/simone/Monviso/monviso_reloaded/monviso_reloaded/base.py", line 20, in load_input
+    _, self.parameters = self.input_parser.load_input(argv)
+  File "/work/simone/Monviso/monviso_reloaded/monviso_reloaded/input_parser.py", line 507, in load_input
+    parameters = self.get_parameters(args.par_file)
+  File "/work/simone/Monviso/monviso_reloaded/monviso_reloaded/input_parser.py", line 365, in get_parameters
+    raise TypeError(error_message)
+TypeError: Parameters file not found in parameters.txt,                please check the path provided.
