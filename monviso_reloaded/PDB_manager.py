@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Union
+import numpy as np
 
 from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection, MMCIFParser
 from Bio.PDB.Polypeptide import index_to_one, three_to_index
@@ -89,6 +90,18 @@ class ChainSelection(Select):
     def accept_atom(self, atom):
         # Filter for standard atoms
         return atom.name.strip() in self.standard_atoms
+    
+
+class NMR_ChainSelection(ChainSelection):
+    def load_residue_selection(self,selection):
+        self.selection=selection
+        self.iterable=-1
+    
+    def accept_residue(self, residue):
+        # Accept only residues that are in the list of standard amino acids
+        self.iterable+=1
+        return (residue.resname.strip() in self.standard_residues) and self.selection[self.iterable]
+    
 
 
 class PDB_manager:
@@ -142,8 +155,9 @@ class PDB_manager:
         of chain 'chain_letter' in
         a filtered new PDB file, if resolution is better
         than the parameter 'resolution'.
-        The exception is with the NMR structures that will
-        be included in all cases.
+        The exception is with the NMR structures. If NMR structure has
+        more than 2 models, average RMSF per residues will be calculated.
+        Only residues with Fluctuation lower than cutoff will be retained.
 
         Args:
             input_pdb_path (Union[Path,str]): The original PDB file path
@@ -196,15 +210,20 @@ class PDB_manager:
             # But it's still missing an estimate of the reolution. Therefore
             # these structures will be cleaned, and included in all cases..
             if "NMR" in structure.header["structure_method"].upper():
-                with FileHandler() as fh:
-                    io = PDBIO()
-                    io.set_structure(structure)
-                    if not fh.check_existence(output_pdb_path):
-                        io.save(
-                            str(output_pdb_path), ChainSelection(chain_letter)
-                        )
-                print(f"NMR structure in path {output_pdb_path}")
-                return 0
+                selection=self._filter_residues_based_on_rmsf(structure,resolution_cutoff)
+                if selection:
+                    with FileHandler() as fh:
+                        io = PDBIO()
+                        io.set_structure(structure)
+                        nmr_selector=NMR_ChainSelection(chain_letter)
+                        nmr_selector.load_residue_selection(selection)
+                        
+                        if not fh.check_existence(output_pdb_path):
+                            io.save(
+                                str(output_pdb_path), nmr_selector
+                            )
+                    print(f"NMR structure in path {output_pdb_path}")
+                    return 0
 
         print(
             f"The file {str(input_pdb_path)} was "
@@ -268,3 +287,47 @@ class PDB_manager:
 
             io.set_structure(structure)
             io.save(output_path, ChainSelection(chain_name))
+
+    def _filter_residues_based_on_rmsf(self,structure,cutoff):
+        """ From a Biopython structure with multiple models, get the per-residue RMSF,
+        and return a list of residues with a RMSF with cutoff.
+
+        Args:
+            structure: a Biopython-parsed structure
+            cutoff:
+            
+        Returns:
+            accepted_residues: Bool list for accepted residues, or False if calculation not possible
+        """
+        
+        models=[m for m in structure.get_models()]
+        if len(models)<2:
+        #Low number of models. Stop calc.
+            return False
+        
+        residues=[[r for r in m.get_residues()] for m in models]
+        number_of_residues=[len(residue_list) for residue_list in residues]
+        check_same_number_per_model=True
+        for n in number_of_residues:
+            if n!=number_of_residues[0]:
+                check_same_number_per_model=False
+        if not check_same_number_per_model:
+        #Different number of residues in the models. Stop calc.
+            return False
+        
+        rmsf=[]
+        for r, residue in enumerate(residues[0]): #use first model residues as iterator
+            atoms=[residue_list[r].get_atoms() for residue_list in residues]
+            coords=np.array([[a.get_coord() for a in atom_list] for atom_list in atoms])
+            
+            #Calculate atom fluctuation as:
+            # sqrt(sum of squared deviation/ (n frames-1))
+            frames=coords.shape[0]
+            mean=coords.mean(axis=0)
+            deviations=np.array([np.linalg.norm(frame- mean,axis=-1) for frame in coords])
+            sum_of_deviations=deviations.sum(axis=0)
+            f=np.sqrt(sum_of_deviations/(frames-1))
+            residue_f=np.mean(f)            
+            rmsf.append(residue_f<=cutoff)
+        return rmsf
+        
