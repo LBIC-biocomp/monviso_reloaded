@@ -33,7 +33,7 @@ class DockableStructure:
     def change_path(self,path_to: Path,new_chain_name="A"):
         with PDB_manager() as pm:
             pm.change_chain_and_save(str(self.path),new_chain_name,str(path_to))
-
+            self.path=Path(path_to)
     
     def write_sasa_residues(self, output_path):
         "Writes residues in the top10% percentile for absolute SASA."
@@ -181,6 +181,7 @@ class DockingManager:
             pattern = f"{gene_couple[1]}/isoform*/{gene_couple[1]}*model/*.pdb*"
             structures=list(self.output_path.glob(pattern))
             structs[1] = [DockableStructure(gene_couple[1],s) for s in structures if "pesto" not in str(s)]
+  
             
             self.coupled_structure_lists.append(structs)
 
@@ -205,12 +206,14 @@ class DockingManager:
                     output=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name)
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
+                            
                             command = f"{str(Path(self.megadock_home,'megadock'))} -R {str(p1.path)} -L {p2.path} -o {str(output)}"
                             subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                             )
-                    
+
                         for i in range(n_exported_structs):
+                            p2.change_path(p2.path,"B")
                             exported_pdb=file_name.replace(".out",f".{i}.pdb")
                             exported_pdb_path=Path(self.output_path,"Docked",directory_name,"MEGADOCK",exported_pdb)
 
@@ -219,6 +222,8 @@ class DockingManager:
                                 subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                                 )
+                            p2.change_path(p2.path,"A")
+
     
     def run_hdocklite(self,n_exported_structs=100):
         for couple in self.coupled_structure_lists:
@@ -228,14 +233,16 @@ class DockingManager:
                     file_name=p1.name+"-"+p2.name
                     file_name=file_name.replace(".pdb","")+".out"
 
-                    tmp_output=Path("/tmp/",file_name)
+                    tmp_output=Path("./","Hdock.out")
                     output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name)
                     with FileHandler() as fh:
                         if not fh.check_existence(output):
+                            p2.change_path(p2.path,"B")
                             command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(tmp_output)}"
                             subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                             )
+                            p2.change_path(p2.path,"A") #Revert change
                             fh.move_file(tmp_output,output)
                     
                         
@@ -277,8 +284,8 @@ class DockingManager:
                             p1.write_pesto_residues(pesto_res1)
                             p2.write_sasa_residues(sasa_res2)
                             p2.write_pesto_residues(pesto_res2)
-                            p1.change_path(Path(output,p1.name),"A")
-                            p2.change_path(Path(output,p2.name),"B")
+                            #p1.change_path(Path(output,p1.name),"A")
+                            p2.change_path(p2.path,"B")
                             
                             hm.generate_tbl(sasa_res1,sasa_res2,sasa_ambig)
                             hm.generate_tbl(pesto_res1,pesto_res2,pesto_ambig)
@@ -287,6 +294,7 @@ class DockingManager:
                             elif self.haddock_selection=="sasa":
                                 tbl_path=sasa_ambig
                             else:
+                                p2.change_path(p2.path,"A") #Revert chain name change
                                 raise ValueError("The haddock selection type was not defined correctly. Use \"pesto\" or \"sasa\", without quotes.")
                             hm.generate_config(p1,p2,tbl_path,config_path)
                             hm.run(config_path)
@@ -294,3 +302,4 @@ class DockingManager:
                         else:
                             print("Skipping Haddock job. Folder already exists.")
                             
+                        p2.change_path(p2.path,"A") #Revert chain name change
