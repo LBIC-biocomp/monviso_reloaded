@@ -128,3 +128,29 @@ class FileHandler:
         ti_m = os.path.getmtime(path)
 
         return ti_c
+    
+    def rename_files_in_directory(self, dir_path: Union[str, Path], old_str: str, new_str: str, verbose=False):
+        """
+        Renames all files in the specified directory by replacing old_str with new_str in their filenames.
+
+        Args:
+            dir_path (Union[str, Path]): The path to the directory containing the files to rename.
+            old_str (str): The substring to be replaced in the filenames.
+            new_str (str): The substring to replace old_str with.
+            verbose (bool, optional): If True, print each renaming operation. Defaults to False.
+        """
+        dir_path = Path(dir_path)
+        if not dir_path.is_dir():
+            print(f"Error: {dir_path} is not a valid directory.")
+            return
+        
+        for file in dir_path.iterdir():
+            if file.is_file():
+                new_name = file.name.replace(old_str, new_str)
+                new_path = file.parent / new_name
+                try:
+                    file.rename(new_path)
+                    if verbose:
+                        print(f"Renamed {file} to {new_path}")
+                except Exception as e:
+                    print(f"Error renaming {file} to {new_path}: {e}")

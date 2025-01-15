@@ -356,6 +356,6 @@ class Gene:
             
             content+="\n".join(isoform[0].modeller_run.logged_scores)+"\n\n"
             
-    
+        content=content.replace("B999","") #Shorten model file name
         with FileHandler() as fh:
             fh.write_file(Path(self.out_path,"report.md"),content)

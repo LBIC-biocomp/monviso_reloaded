@@ -314,13 +314,15 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
         )
         with FileHandler() as fh:
             fh.create_directory(model_path)
-        home_working_directory = os.getcwd()
-        os.chdir(str(model_path))
-        script_path = "../run_modeller_" + "".join(self.mutation) + ".py"
-        command = f"{self.modeller_exec} {str(script_path)}"
-        subprocess.run(
-            command, shell=True, universal_newlines=True, check=True
-        )
+            home_working_directory = os.getcwd()
+            os.chdir(str(model_path))
+            script_path = "../run_modeller_" + "".join(self.mutation) + ".py"
+            command = f"{self.modeller_exec} {str(script_path)}"
+            subprocess.run(
+                command, shell=True, universal_newlines=True, check=True
+            )
+            fh.rename_files_in_directory(Path(os.getcwd()),"B999","")
+
         os.chdir(home_working_directory)
         self.load_log_file()
 
