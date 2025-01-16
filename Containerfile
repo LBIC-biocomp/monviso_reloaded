@@ -30,7 +30,7 @@ ENV PATH=/miniconda/bin:${PATH}
 # Create a conda environment and install Python 3.9
 RUN conda create -n myenv python=3.9 -y
 RUN echo "source activate myenv" > ~/.bashrc
-ENV PATH /miniconda/envs/myenv/bin:$PATH
+ENV PATH=/miniconda/envs/myenv/bin:$PATH
 
 # Install Modeller
 RUN conda install -c salilab modeller -y
@@ -63,7 +63,7 @@ RUN wget http://eddylab.org/software/hmmer/hmmer.tar.gz && \
     rm -r $hmmer_folder
 
 #Install FFTW
-ENV FFTW_TARGET fftw-3.3.8
+ENV FFTW_TARGET=fftw-3.3.8
 
 RUN wget -P /tmp http://www.fftw.org/${FFTW_TARGET}.tar.gz && \
     tar xzf /tmp/${FFTW_TARGET}.tar.gz -C /tmp && \
@@ -101,18 +101,16 @@ RUN mv /tmp/HADDOCKer/HADDOCK3/cns_solve_1.3_all_intel-mac_linux.tar.gz /Monviso
 
 
 ## Note: The custom cns1.3 files are from the HADDOCK3 repo under "varia"
-RUN export CNS=/Monviso/cns_solve && \
-    tar -xzf /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz -C /Monviso/&& \
-    mv /Monviso/cns_solve_1.3/ $CNS && \
-    rm /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz && \
-    cp /Monviso/haddock3/varia/cns1.3/* $CNS/source && \
-    sed -i 's/_CNSsolve_location_/\/Monviso\/cns_solve/g' $CNS/cns_solve_env && \
-    chmod -R 777 /Monviso && \
-    cd $CNS && \
-    make install compiler=gfortran && \
-    #cp -r /Monviso/cns_solve/intel-x86_64bit-linux/bin /Monviso/haddock3
-    mkdir /Monviso/haddock3/bin \
-    cp $CNS/intel-x86_64bit-linux/source/bin/cns /Monviso/haddock3/bin/cns
+ENV CNS=/Monviso/cns_solve
+RUN tar -xzf /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz -C /Monviso/
+RUN mv /Monviso/cns_solve_1.3/ $CNS
+RUN rm /Monviso/cns_solve_1.3_all_intel-mac_linux.tar.gz
+RUN cp /Monviso/haddock3/varia/cns1.3/* $CNS/source
+RUN sed -i 's/_CNSsolve_location_/\/Monviso\/cns_solve/g' $CNS/cns_solve_env
+RUN chmod -R 777 /Monviso
+RUN cd $CNS && make install compiler=gfortran
+RUN mkdir /Monviso/haddock3/bin 
+RUN cp $CNS/intel-x86_64bit-linux/bin/cns /Monviso/haddock3/bin/cns
 
 RUN /bin/bash -c "cd /Monviso/haddock3 && source activate myenv && pip install -e ."
 
