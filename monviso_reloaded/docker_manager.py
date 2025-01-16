@@ -134,8 +134,8 @@ sampling = 1000
             
     def generate_config(self, protein1: DockableStructure, protein2: DockableStructure, tbl_path: Path, output_path: Path):
         output_string=self.default_config
-        output_string=output_string.replace("$molecule1",protein1.path.name)
-        output_string=output_string.replace("$molecule2",protein2.path.name)
+        output_string=output_string.replace("$molecule1",str(protein1.path.absolute()))
+        output_string=output_string.replace("$molecule2",str(protein2.path.absolute()))
         output_string=output_string.replace("$ambig_restraints",tbl_path.name)
 
         with FileHandler() as fh:
@@ -246,15 +246,18 @@ class DockingManager:
                             fh.move_file(tmp_output,output)
                     
                         
-                        exported_pdb=file_name.replace(".out",f".top{n_exported_structs}.pdb")
-                        exported_pdb_path=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",exported_pdb)
-
-                        if not fh.check_existence(exported_pdb_path):
-                            command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} {str(exported_pdb_path)} -nmax {n_exported_structs} -complex -models"
-                            subprocess.run(
+                        exported_pdb=[file_name.replace(".out",f"_{ID+1}.pdb") for ID in range(n_exported_structs)]
+                        exported_pdb_path=[Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file) for file in exported_pdb]
+                        
+                        command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} model.pdb -nmax {n_exported_structs} -complex -models"
+                        subprocess.run(
                             command, shell=True, universal_newlines=True, check=True
                             )
-    
+
+                        for modelID in range(n_exported_structs):
+                                fh.move_file(f"model_{modelID+1}.pdb",exported_pdb_path[modelID])
+                        
+
     def run_haddock(self):
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
