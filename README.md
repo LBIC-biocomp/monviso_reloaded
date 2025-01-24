@@ -71,7 +71,7 @@ W_STRUCT=10
 W_MUT=10
 ```
 
-[`uniprot_sprot.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz ) and [`uniprot_sprot_varsplic.fasta`] (https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot_varsplic.fasta.gz) must be downloaded from UniProt and placed in the DB_LOCATION path.
+[`uniprot_sprot.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz ) and [`uniprot_sprot_varsplic.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot_varsplic.fasta.gz) must be downloaded from UniProt and placed in the DB_LOCATION path.
 
 The mutation file lists the gene names and associated mutations. Example (mutations.txt):
 ```text
