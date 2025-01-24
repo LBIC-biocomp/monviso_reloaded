@@ -1,4 +1,4 @@
-# Monviso
+![Monviso](https://github.com/LBIC-biocomp/monviso_reloaded/blob/main/logo.png?raw=true)
 
 MoNvIso is a comprehensive software tool designed for the analysis and modeling of protein isoforms and protein-protein complexes. It automates the process of identifying canonical and additional isoforms, assessing their modeling propensity, mapping mutations accurately, and building structural models of proteins. The starting point can be either gene names or sequences, making it versatile for various workflows.
 
