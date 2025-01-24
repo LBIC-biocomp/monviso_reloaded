@@ -224,6 +224,12 @@ class DockingManager:
                                 )
                             p2.change_path(p2.path,"A")
 
+                            megadock_generated_pdb=fh.read_file(exported_pdb_path)
+                            protein_partner= fh.read_file(p1.path)
+                            content=protein_partner+megadock_generated_pdb
+
+                            fh.write_file(exported_pdb_path, content)
+
     
     def run_hdocklite(self,n_exported_structs=100):
         for couple in self.coupled_structure_lists:
