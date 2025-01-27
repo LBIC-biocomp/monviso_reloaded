@@ -19,22 +19,22 @@ MoNvIso also automates SASA (solvent-accessible surface area) analysis, residue 
    ```bash
    ./installer.sh
    ```
+   
+   (b) Alternatively, use the `Containerfile` with Docker:
+   ```bash
+   docker build --build-arg MODELLER_LICENSE=INSERT_LICENSE --build-arg HDOCKLITE_URL=PATH_TO_HDOCKlite.tar.gz -t monviso -f ./Containerfile ./
 
-3.  (b) Alternatively, use the `Containerfile` with Docker:
-```bash
-docker build --build-arg MODELLER_LICENSE=INSERT_LICENSE --build-arg HDOCKLITE_URL=PATH_TO_HDOCKlite.tar.gz -t monviso -f ./Containerfile ./
+   ```
 
-```
-
-3. (c) Install [msms](https://ccsb.scripps.edu/msms/), [HADDOCK3.0](https://github.com/haddocking/haddock3) with patched CNS1.3, [MEGADOCK](https://github.com/akiyamalab/MEGADOCK), [COBALT](ftp://ftp.ncbi.nlm.nih.gov/pub/cobalt/executables/LATEST/), [HMMER](http://eddylab.org/software/hmmer/hmmer.tar.gz), [PeSTo](https://github.com/LBM-EPFL/PeSTo) manually. Then clone this repository and
-```bash
-cd monviso_reloaded/
-pip install -e .
-```
-or
-```bash
-pip install monviso
-```
+   (c) Install [msms](https://ccsb.scripps.edu/msms/), [HADDOCK3.0](https://github.com/haddocking/haddock3) with patched CNS1.3, [MEGADOCK](https://github.com/akiyamalab/MEGADOCK),       [COBALT](ftp://ftp.ncbi.nlm.nih.gov/pub/cobalt/executables/LATEST/), [HMMER](http://eddylab.org/software/hmmer/hmmer.tar.gz), [PeSTo](https://github.com/LBM-EPFL/PeSTo) manually.      Then clone this repository and
+   ```bash
+   cd monviso_reloaded/
+   pip install -e .
+   ```
+   or
+   ```bash
+   pip install monviso
+   ```
 
 
 
