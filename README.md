@@ -29,6 +29,7 @@ MoNvIso also automates SASA (solvent-accessible surface area) analysis, residue 
    (c) Install [msms](https://ccsb.scripps.edu/msms/), [HADDOCK3.0](https://github.com/haddocking/haddock3) with patched CNS1.3, [MEGADOCK](https://github.com/akiyamalab/MEGADOCK),       [COBALT](ftp://ftp.ncbi.nlm.nih.gov/pub/cobalt/executables/LATEST/), [HMMER](http://eddylab.org/software/hmmer/hmmer.tar.gz), [PeSTo](https://github.com/LBM-EPFL/PeSTo) manually.      Then clone this repository and
    ```bash
    cd monviso_reloaded/
+   python -m pip install --upgrade pip setuptools wheel
    pip install -e .
    ```
    or

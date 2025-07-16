@@ -237,13 +237,25 @@ class InputParser(argparse.ArgumentParser):
         with Path(mutation_file_path).open() as my_file:
             content = my_file.read()
             
-        
+        #Remove comments
+        lines=content.split('\n')
+        stripped_lines=[]
+        for line in lines:
+            if '#' in line:
+                stripped_lines.append(line.split('#')[0].rstrip())
+            else:
+                stripped_lines.append(line)
+        content="\n".join(stripped_lines)
+
         #Remove useless new lines
-        while content[-1]=="\n":
+        while content[-1]=="\n": #at the end
             content=content[:-1]
-            
+        
+        while content[0]=="\n": # at the beginning
+            content=content[1:]
         while "\n\n\n" in content:
             content=content.replace('\n\n\n','\n\n')
+        
         
         blocks = [block.splitlines() for block in content.split("\n\n")]
         self._check_block_length(blocks,expected_block_length)
@@ -270,7 +282,7 @@ class InputParser(argparse.ArgumentParser):
                 if blocks_with_correct_length==len(blocks):
                     return True
                 else:
-                    raise ValueError(f"Block of text with length different than {n} line in the inpute file.")
+                    raise ValueError(f"Block of text with length different than {n} lines in the input file.")
     
     def parse_sequences(self,sequence_file_path: argparse.Namespace) -> List:
         """Parses a sequence file to extract gene names, sequence names,
@@ -291,8 +303,7 @@ class InputParser(argparse.ArgumentParser):
             content = my_file.read().split("\n")
         
         for i, line in enumerate(content):
-            
-            if line=="\n":
+            if line=="\n" or len(line)==0:
                 pass
             elif line.startswith(">"):
                 splitline=line[1:].split(':')
@@ -306,6 +317,7 @@ class InputParser(argparse.ArgumentParser):
                                      f"The line that led to the error is: {line}")
                 if len(splitline)==3:
                     splitline[2]=[mutation.replace(" ","") for mutation in splitline[2].split(",")]
+                    splitline[2]=[mut for mut in splitline[2] if len(mut)>0]
                 if len(splitline)==2:
                     splitline.append([])
                     
