@@ -31,12 +31,12 @@ class HomologyModelRun:
         """Parse the list of gene names, sequence names and sequences from the input file
         and save it as attribute.
         """
-        mutation_list = self.input_parser.parse_sequences(
+        sequence_list = self.input_parser.parse_input(
             self.parameters["INPUT_FILE"]
         )
         
-        for i in range(len(mutation_list)//2):
-            self.mutation_list.append([mutation_list[i*2],mutation_list[i*2+1]])
+        for i,seq in enumerate(sequence_list):
+            self.mutation_list.append([seq[:-1],seq[-1]])
 
 
     def create_genes(self, sequenceRun=False) -> None:
@@ -95,7 +95,7 @@ class HomologyModelRun:
         """
         for gene in self.genes:
             for isoform in gene.isoforms:
-                isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"])
+                isoform.HMMsearch(hmmer_home=self.parameters["HMMER_HOME"],database=self.parameters["DB_LOCATION"])
 
     def load_templates(self) -> None:
         for gene in self.genes:

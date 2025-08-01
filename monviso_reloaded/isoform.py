@@ -158,13 +158,14 @@ class Isoform:
                 return output_path
         print("Done")
 
-    def HMMsearch(self, hmmer_home: Union[str, Path]) -> None:
+    def HMMsearch(self, hmmer_home: Union[str, Path],database: Union[str, Path]) -> None:
         """Take the aligned cobalt output from the aligned.fasta
         file, build .hmm file,and use it as query for a hmmsearch.
 
         Args:
             hmmer_home (Union[str,Path]): Home of the HMMer program,
             where executables are stored.
+            databse (Union[str,Path]): Where the PDB databank sequences are stored
         """
         with FileHandler() as fh:
             hmm_path = self.buildHMM(hmmer_home=hmmer_home)
@@ -175,7 +176,7 @@ class Isoform:
                 "Looking for templates for "
                 f"{self.gene_name} {self.isoform_name}"
             )
-            templates_path = Path(self.out_path, "possible_templates.xml")
+            templates_path = Path(self.out_path, "possible_templates.tbl")
             
             loaded_templates=False #Remains false, while the correct template list is not downloaded correctly
 
@@ -185,6 +186,8 @@ class Isoform:
                         'Accept:text/xml' -F seqdb=pdb -F\
                         seq='<{str(hmm_path)}' \
                         https://www.ebi.ac.uk/Tools/hmmer/search/hmmsearch"
+                    
+                    command= f"{str(Path(hmmer_home,'hmmsearch'))} --tblout {str(templates_path)} {str(hmm_path)} {str(Path(database,'pdb_seqres.txt'))} "
                     try:
 
                         result = subprocess.run(
@@ -214,7 +217,7 @@ class Isoform:
     def _extract_pdb_names(self, max_pdb: int) -> list:
         """Extact PDB names from the hmmsearch file found in
         the isoform directory, with the name possible
-        templates.xml.
+        templates.tbl.
 
         Args:
             max_pdb: The maximum number of PDB templates
@@ -227,16 +230,16 @@ class Isoform:
         with FileHandler() as fh:
             pdb_list_path = Path(self.out_path, "all_pdbs.dat")
             top_templates_path = Path(self.out_path, "top_templates.dat")
-            templates_path = Path(self.out_path, "possible_templates.xml")
+            templates_path = Path(self.out_path, "possible_templates.tbl")
             if not (
                 fh.check_existence(pdb_list_path)
                 and fh.check_existence(top_templates_path)
             ):
                 templates_content = fh.read_file(templates_path).splitlines()
                 pdb_list = [
-                    line[16:22]
+                    line[:16].rstrip()  #Only first 16 charachers considered, but needs to be changed for longer chain names or new PDB IDs
                     for line in templates_content
-                    if "hits name" in line
+                    if line[0]!="#"
                 ]
                 templates_list = pdb_list[:max_pdb]
                 fh.write_file(top_templates_path, "\n".join(templates_list))

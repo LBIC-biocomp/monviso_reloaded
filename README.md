@@ -45,7 +45,7 @@ MoNvIso also automates SASA (solvent-accessible surface area) analysis, residue 
 You will need:
 
 - A file containing paths and parameters (parameters.dat),
-- Uniprot database files,
+- Uniprot database files and PDB databank sequences,
 - A file listing gene names and mutations.
 
 The parameter file will look like this:
@@ -72,7 +72,7 @@ W_STRUCT=10
 W_MUT=10
 ```
 
-[`uniprot_sprot.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz ) and [`uniprot_sprot_varsplic.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot_varsplic.fasta.gz) must be downloaded from UniProt and placed in the DB_LOCATION path.
+[`uniprot_sprot.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz ) and [`uniprot_sprot_varsplic.fasta`](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot_varsplic.fasta.gz) must be downloaded from UniProt and placed in the DB_LOCATION path. The same for [`pdb_seqres.txt`](https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt.gz), downloaded from RCSB.org and placed in the DB_LOCATION path. 
 
 The mutation file lists the gene names and associated mutations. Example (mutations.txt):
 ```text

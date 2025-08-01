@@ -43,7 +43,6 @@ class Analyzer:
         self.pdb_filepaths=[]
         for gene in self.gene_list:
             self.pdb_filepaths+=glob(str(Path(self.output_path,gene,"*","*model","*pdb")))
-        
         self.pdb_filepaths=[f for f in self.pdb_filepaths if "pesto" not in f]
         self.dataset=StructuresDataset(self.pdb_filepaths, with_preprocessing=True) # type: ignore
     

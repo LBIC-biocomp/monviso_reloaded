@@ -242,7 +242,9 @@ class InputParser(argparse.ArgumentParser):
         stripped_lines=[]
         for line in lines:
             if '#' in line:
-                stripped_lines.append(line.split('#')[0].rstrip())
+                before_comment=line[:line.index('#')].rstrip()
+                if len(before_comment)>0:
+                    stripped_lines.append(before_comment)
             else:
                 stripped_lines.append(line)
         content="\n".join(stripped_lines)
@@ -256,11 +258,13 @@ class InputParser(argparse.ArgumentParser):
         while "\n\n\n" in content:
             content=content.replace('\n\n\n','\n\n')
         
+        if content[0]==">": #In the case of Monviso sequence input
+            return self.parse_sequences(content)    
         
-        blocks = [block.splitlines() for block in content.split("\n\n")]
-        self._check_block_length(blocks,expected_block_length)
-        
-        return blocks
+        else:
+            blocks = [block.splitlines() for block in content.split("\n\n")]
+            self._check_block_length(blocks,expected_block_length)
+            return blocks
     
     def _check_block_length(self,blocks, n=None) -> bool:
         """Check the block lenth of each of the block obtained from the input
@@ -284,26 +288,22 @@ class InputParser(argparse.ArgumentParser):
                 else:
                     raise ValueError(f"Block of text with length different than {n} lines in the input file.")
     
-    def parse_sequences(self,sequence_file_path: argparse.Namespace) -> List:
+    def parse_sequences(self,sequence_content) -> List:
         """Parses a sequence file to extract gene names, sequence names,
         mutation lists, and protein sequences.
 
         Args:
-            sequence_file_path (argparse.Namespace): The path to the file containing
-                                                    gene and sequence names, followed by
-                                                    mutation list and on protein sequence
-                                                    on a new line.
-
+            sequence_content: The content of a Monviso sequence input
+                                        file, already cleaned from comments and multiple
+                                        new lines.
         Returns:
-            List: An alternating list of [gene name, sequence name, mutation list] followed by
-                                        the string of the sequence.
+            List: A list of [gene name, sequence name, mutation list,followed by
+                                        the string of the sequence].
         """
         parsed_sequences=[]
-        with Path(sequence_file_path).open() as my_file:
-            content = my_file.read().split("\n")
-        
+        content=sequence_content.split("\n")
         for i, line in enumerate(content):
-            if line=="\n" or len(line)==0:
+            if len(line)==0:
                 pass
             elif line.startswith(">"):
                 splitline=line[1:].split(':')
@@ -331,7 +331,7 @@ class InputParser(argparse.ArgumentParser):
            merged_parsed_sequences=[]
            for chunk in parsed_sequences:
                merged_parsed_sequences.append(chunk[0])
-               merged_parsed_sequences.append("".join(chunk[1:]).replace("\n",""))
+               merged_parsed_sequences[-1].append("".join(chunk[1:]).replace("\n",""))
         
         return merged_parsed_sequences
 

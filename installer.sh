@@ -144,7 +144,9 @@ wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot_varsplic.fasta.gz
 gzip -f -d uniprot_sprot.fasta.gz
 gzip -f -d uniprot_sprot_varsplic.fasta.gz
-
+#Same for PDB sequences
+wget https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt.gz
+gzip -f -d pdb_seqres.txt.gz
 
 echo "DB_LOCATION=$INSTALL_DIR" > parameters.txt && \
 echo "MEGADOCK_HOME=$INSTALL_DIR/MEGADOCK" >> parameters.txt && \

@@ -175,10 +175,10 @@ class DockingManager:
         
         for gene_couple in self.gene_list:
             structs=[[],[]]
-            pattern = f"{gene_couple[0]}/isoform*/{gene_couple[0]}*model/*.pdb*"
+            pattern = f"{gene_couple[0]}/*/{gene_couple[0]}*model/*.pdb*"
             structures=list(self.output_path.glob(pattern))
             structs[0] = [DockableStructure(gene_couple[0],s) for s in structures if "pesto" not in str(s)]
-            pattern = f"{gene_couple[1]}/isoform*/{gene_couple[1]}*model/*.pdb*"
+            pattern = f"{gene_couple[1]}/*/{gene_couple[1]}*model/*.pdb*"
             structures=list(self.output_path.glob(pattern))
             structs[1] = [DockableStructure(gene_couple[1],s) for s in structures if "pesto" not in str(s)]
   
