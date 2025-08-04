@@ -1,7 +1,9 @@
-from pathlib import Path
 import subprocess
 import pandas as pd
 import os
+import numpy as np
+from pathlib import Path
+from scipy.spatial.transform import Rotation
 
 from .file_handler import FileHandler
 from .PDB_manager import PDB_manager
@@ -58,7 +60,50 @@ class DockableStructure:
             output_string=",".join(list(selection["Residue number"]))
             fh.write_file(output_path,output_string)
 
+class ClusteringStructure:
+    def __init__(self,path, software):
+        self.path=path
+        self.software=software
+        self.ca_positions=[]
+        self.chain_a_count=0
+        self.chain_b_count=0
+        self._load_CA_atoms()
+
+    
+    def _load_CA_atoms(self):
+        ca_positions = []
+
+        with FileHandler() as fh:
+            lines = fh.read_file(self.path).split('\n')
+
+        for line in lines:
+            if line.startswith("ATOM") and line[12:16].strip() == "CA":
+                x = float(line[30:38])
+                y = float(line[38:46])
+                z = float(line[46:54])
+                ca_positions.append([x, y, z])
+
+                chain_id = line[21].strip()
+                if chain_id == 'A':
+                    self.chain_a_count += 1
+                elif chain_id == 'B':
+                    self.chain_b_count += 1
+
+        self.ca_positions = np.array(ca_positions)
+    
+    def fit_on_reference(self,reference):
+        if self.chain_a_count>self.chain_b_count:
+            ref_ca_positions=reference.ca_positions[:self.chain_a_count]
+            fit_ca_positions=self.ca_positions[:self.chain_a_count]
+        else:
+            ref_ca_positions=reference.ca_positions[self.chain_b_count:]
+            fit_ca_positions=self.ca_positions[self.chain_b_count:]
             
+        fit_ca_positions-ref_ca_positions.mean(axis=0)
+        self.ca_positions-ref_ca_positions.mean(axis=0)
+
+        rotation_fit=Rotation.align_vectors(ref_ca_positions,fit_ca_positions)
+        self.ca_positions=rotation_fit[0].apply(self.ca_positions)
 class HaddockManager:
     def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path, haddock_selection: str, haddock_cutoff: float):
         self.protein1=protein1
@@ -166,6 +211,8 @@ class DockingManager:
         self.run_megadock()
         self.run_hdocklite()
         self.run_haddock()
+        self.cluster()
+        #self.run_final()
         
     def load_structures(self):
         """For each couple of genes in self.gene_list,
@@ -193,6 +240,7 @@ class DockingManager:
                 fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"MEGADOCK"))
                 fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"HDOCKLITE"))
                 fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"HADDOCK"))
+                fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"FINAL"))
     
     
     def run_megadock(self,n_exported_structs=100):
@@ -201,10 +249,11 @@ class DockingManager:
                 for p2 in couple[1]:
                     directory_name=p1.gene+"-"+p2.gene
                     file_name=p1.name+"-"+p2.name
-                    file_name=file_name.replace(".pdb","")+".out"
+                    file_name=file_name.replace(".pdb","")
 
-                    output=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name)
+                    output=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name,file_name+".out")
                     with FileHandler() as fh:
+                        fh.create_directory(Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name))
                         if not fh.check_existence(output):
                             
                             command = f"{str(Path(self.megadock_home,'megadock'))} -R {str(p1.path)} -L {p2.path} -o {str(output)}"
@@ -212,24 +261,25 @@ class DockingManager:
                                 command, shell=True, universal_newlines=True, check=True
                             )
 
-                        for i in range(n_exported_structs):
-                            p2.change_path(p2.path,"B")
-                            exported_pdb=file_name.replace(".out",f".{i}.pdb")
-                            exported_pdb_path=Path(self.output_path,"Docked",directory_name,"MEGADOCK",exported_pdb)
+                            for i in range(n_exported_structs):
+                                p2.change_path(p2.path,"B")
+                                exported_pdb=file_name+f".{i}.pdb"
+                                exported_pdb_path=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name,exported_pdb)
 
-                            if not fh.check_existence(exported_pdb_path):
-                                command = f"{str(Path(self.megadock_home,'decoygen'))} {str(exported_pdb_path)} {p2.path} {str(output)} {i+1}"
-                                subprocess.run(
-                                command, shell=True, universal_newlines=True, check=True
-                                )
-                            p2.change_path(p2.path,"A")
+                                if not fh.check_existence(exported_pdb_path):
+                                    command = f"{str(Path(self.megadock_home,'decoygen'))} {str(exported_pdb_path)} {p2.path} {str(output)} {i+1}"
+                                    subprocess.run(
+                                    command, shell=True, universal_newlines=True, check=True
+                                    )
+                                p2.change_path(p2.path,"A")
 
-                            megadock_generated_pdb=fh.read_file(exported_pdb_path)
-                            protein_partner= fh.read_file(p1.path)
-                            content=protein_partner+megadock_generated_pdb
+                                megadock_generated_pdb=fh.read_file(exported_pdb_path)
+                                protein_partner= fh.read_file(p1.path)
+                                content=protein_partner+megadock_generated_pdb
 
-                            fh.write_file(exported_pdb_path, content)
-
+                                fh.write_file(exported_pdb_path, content)
+                        else:
+                            print(f"Skipping MEGADOCK job. Output {str(output)} already exists.")
     
     def run_hdocklite(self,n_exported_structs=100):
         for couple in self.coupled_structure_lists:
@@ -237,11 +287,12 @@ class DockingManager:
                 for p2 in couple[1]:
                     directory_name=p1.gene+"-"+p2.gene
                     file_name=p1.name+"-"+p2.name
-                    file_name=file_name.replace(".pdb","")+".out"
+                    file_name=file_name.replace(".pdb","")
 
                     tmp_output=Path("./","Hdock.out")
-                    output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name)
+                    output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name,file_name+".out")
                     with FileHandler() as fh:
+                        fh.create_directory(Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name))
                         if not fh.check_existence(output):
                             p2.change_path(p2.path,"B")
                             command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(tmp_output)}"
@@ -250,10 +301,11 @@ class DockingManager:
                             )
                             p2.change_path(p2.path,"A") #Revert change
                             fh.move_file(tmp_output,output)
-                    
+                        else:
+                            print(f"Skipping HDOCKlite job. Output {str(output)} already exists.")
                         
-                        exported_pdb=[file_name.replace(".out",f"_{ID+1}.pdb") for ID in range(n_exported_structs)]
-                        exported_pdb_path=[Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file) for file in exported_pdb]
+                        exported_pdb=[file_name+f"_{ID+1}.pdb" for ID in range(n_exported_structs)]
+                        exported_pdb_path=[Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name,file) for file in exported_pdb]
                         
                         command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} model.pdb -nmax {n_exported_structs} -complex -models"
                         subprocess.run(
@@ -261,7 +313,7 @@ class DockingManager:
                             )
 
                         for modelID in range(n_exported_structs):
-                                fh.move_file(f"model_{modelID+1}.pdb",exported_pdb_path[modelID])
+                                fh.move_file(Path(Path.cwd(),f"model_{modelID+1}.pdb"),exported_pdb_path[modelID])
                         
 
     def run_haddock(self):
@@ -304,11 +356,58 @@ class DockingManager:
                                 tbl_path=sasa_ambig
                             else:
                                 p2.change_path(p2.path,"A") #Revert chain name change
-                                raise ValueError("The haddock selection type was not defined correctly. Use \"pesto\" or \"sasa\", without quotes.")
+                                raise ValueError("The haddock selection type was not defined correctly. Use \"pesto\" or \"sasa\", without quotation marks.")
                             hm.generate_config(p1,p2,tbl_path,config_path)
                             hm.run(config_path)
                         
                         else:
-                            print("Skipping Haddock job. Folder already exists.")
+                            print(f"Skipping Haddock job. Folder {str(output)} already exists.")
                             
                         p2.change_path(p2.path,"A") #Revert chain name change
+                        
+    
+    def cluster(self):
+        #List directories with first docking round output
+        dirs=[]
+        
+        for couple in self.coupled_structure_lists:
+            for p1 in couple[0]:
+                for p2 in couple[1]:
+                    directory_name=p1.gene+"-"+p2.gene
+                    file_name=p1.name+"-"+p2.name
+                    file_name=file_name.replace(".pdb","")
+                    dirs.append(Path(self.output_path,"Docked",directory_name,"HADDOCK",file_name+"_run","run","1_rigidbody"))
+                    dirs.append(Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name))
+                    dirs.append(Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name))
+
+
+                    #Load all .pdb and .pdb.gz files as MDanalysis universes.
+                    structures_for_clustering=[] 
+                    software_names=["HADDOCK","HDOCKLITE","MEGADOCK"]
+                    for d,dir in enumerate(dirs):
+                        structures=list(dir.glob("*pdb*"))
+                        structures.sort()
+                        for s,struct in enumerate(structures):
+                            if struct.suffixes == ['.pdb','.gz']:
+                                with gzip.open(str(struct), 'rb') as f_in:
+                                    with open(str(struct).replace('.pdb.gz','.pdb'), 'wb') as f_out:
+                                        shutil.copyfileobj(f_in, f_out)
+                                struct = Path(str(struct).replace('.pdb.gz','.pdb'))
+                            structures_for_clustering.append( ClusteringStructure(struct,software_names[d]) )
+
+                    
+                    #Fix chain A and chain B atom counts for HOCKlite molecules
+                    #Copy the number from haddock structures to all other structures
+                    for struct in structures_for_clustering:
+                        struct.chain_a_count=structures_for_clustering[0].chain_a_count
+                        struct.chain_b_count=structures_for_clustering[0].chain_b_count
+                        
+                    #And then fit all structures on the first structure of Haddock
+                    
+                    for struct in structures_for_clustering:
+                        struct.fit_on_reference(structures_for_clustering[0])
+
+        
+        
+        
+        
