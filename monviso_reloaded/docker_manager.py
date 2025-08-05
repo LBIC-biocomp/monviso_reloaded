@@ -65,13 +65,24 @@ class ClusteringStructure:
         self.path=path
         self.software=software
         self.ca_positions=[]
+        self.residue_numbers=[]
         self.chain_a_count=0
         self.chain_b_count=0
         self._load_CA_atoms()
 
     
     def _load_CA_atoms(self):
+        """
+        Loads the CA atoms from the PDB file.
+
+        This method parses the PDB file to extract the positions of all CA atoms,
+        along with the counts of chain A and chain B atoms.
+
+        Returns:
+            None
+        """
         ca_positions = []
+        residue_numbers = []
 
         with FileHandler() as fh:
             lines = fh.read_file(self.path).split('\n')
@@ -82,6 +93,7 @@ class ClusteringStructure:
                 y = float(line[38:46])
                 z = float(line[46:54])
                 ca_positions.append([x, y, z])
+                residue_numbers.append(int(line[22:26]))
 
                 chain_id = line[21].strip()
                 if chain_id == 'A':
@@ -90,8 +102,39 @@ class ClusteringStructure:
                     self.chain_b_count += 1
 
         self.ca_positions = np.array(ca_positions)
+        self.residue_numbers = residue_numbers
+
+    def calculate_proximity(self):
+        """
+        Calculates the proximity of CA atoms from chain A to chain B and vice versa.
+
+        This method identifies pairs of CA atoms where the distance between them
+        is less than or equal to 5 Å. It stores the residue numbers of these
+        pairs in two lists: `chain_a_to_b` and `chain_b_to_a`.
+
+        Returns:
+            None
+        """
+        chain_a_to_b = []
+        chain_b_to_a = []
+
+        for i, ca_a in enumerate(self.ca_positions[:self.chain_a_count]):
+            for j,ca_b in enumerate(self.ca_positions[self.chain_a_count:]):
+                distance = np.linalg.norm(np.array(ca_a) - np.array(ca_b))
+                if distance < 5.0: #Angstrom
+                    chain_a_to_b.append(self.residue_numbers[i])
+                    chain_b_to_a.append(self.residue_numbers[self.chain_a_count+j])
+        self.chain_a_to_b = chain_a_to_b
+        self.chain_b_to_a = chain_b_to_a
+
     
-    def fit_on_reference(self,reference):
+    def fit_on_reference(self, reference):
+        """
+        Fits the clustering structure on the larger chain of a molecule.
+
+        Parameters:
+            reference (ClusteringStructure): The reference ClusteringStructure to align against.
+        """
         if self.chain_a_count>self.chain_b_count:
             ref_ca_positions=reference.ca_positions[:self.chain_a_count]
             fit_ca_positions=self.ca_positions[:self.chain_a_count]
@@ -106,17 +149,28 @@ class ClusteringStructure:
         self.ca_positions=rotation_fit[0].apply(self.ca_positions)
     
     def calculate_smaller_chain_RMSD(self,reference):
-        if self.chain_a_count<self.chain_b_count:
-            ref_ca_positions=reference.ca_positions[:self.chain_a_count]
-            fit_ca_positions=self.ca_positions[:self.chain_a_count]
+        """Calculates the Root Mean Square Deviation (RMSD) between the CA atoms of the smaller chain and the CA atoms of the reference chain.
+
+        The RMSD is a measure of the average distance between pairs of corresponding atoms in the protein structures.
+
+        Args:
+            reference (ClusteringStructure): The reference structure against which the RMSD is calculated.
+
+        Returns:
+            float: The RMSD between the CA atoms of the smaller chain and the reference chain.
+        """
+        if self.chain_a_count < self.chain_b_count:
+            ref_ca_positions = reference.ca_positions[:self.chain_a_count]
+            fit_ca_positions = self.ca_positions[:self.chain_a_count]
         else:
-            ref_ca_positions=reference.ca_positions[self.chain_b_count:]
-            fit_ca_positions=self.ca_positions[self.chain_b_count:]
+            ref_ca_positions = reference.ca_positions[self.chain_b_count:]
+            fit_ca_positions = self.ca_positions[self.chain_b_count:]
             
         distances = np.linalg.norm(ref_ca_positions - fit_ca_positions, axis=1)
-        distances_sqrd= distances**2
-        rmsd= np.sqrt( distances_sqrd.mean())
+        distances_sqrd = distances**2
+        rmsd = np.sqrt(distances_sqrd.mean())
         return rmsd
+    
         
         
 class HaddockManager:
@@ -164,7 +218,6 @@ ambig_fname = "$ambig_restraints"
 randremoval = false
 # Number of models to generate
 sampling = 1000
-
 """
 
     def copy_structures(self):
@@ -486,4 +539,41 @@ class DockingManager:
                             distance_matrix[s1,s1+s2]=rmsd
                             distance_matrix[s1+s2,s1]=rmsd
         
-                    self.cluster_distance_matrix(distance_matrix)
+                    #Calculate clusters
+                    clusters=self.cluster_distance_matrix(distance_matrix)
+                    
+                    #Compile the content of a tabular report
+                    report_content="Path,Software,Cluster number\n"
+                    for cluster_number,cluster in enumerate(clusters):
+                        for structID in cluster[1]:
+                            report_content+=str(structures_for_clustering[structID].path.name)
+                            report_content+=","
+                            report_content+=str(structures_for_clustering[structID].software)
+                            report_content+=","
+                            report_content+=str(cluster_number)+"\n"
+                    
+                    # Identify contacts between chain A and B in top 3 centroids
+                    chain_A_contacts=[]
+                    chain_B_contacts=[]
+                    
+                    for cluster in clusters[:3]:
+                        structures_for_clustering[cluster[0]].calculate_proximity()
+                        chain_A_contacts+=structures_for_clustering[cluster[0]].chain_a_to_b
+                        chain_B_contacts+=structures_for_clustering[cluster[0]].chain_b_to_a
+                    
+                    #Remove duplicates
+                    chain_A_contacts=list(set(chain_A_contacts))
+                    chain_B_contacts=list(set(chain_B_contacts))
+                    chain_A_contacts.sort()
+                    chain_B_contacts.sort()
+                    
+                    with FileHandler() as fh:
+                        final_output=Path(self.output_path,"Docked",directory_name,"FINAL",file_name)
+                        fh.create_directory(final_output)
+                        report_output=Path(final_output,"clustering_report.csv")
+                        fh.write_file(report_output,report_content)
+                        
+                        chain_A_contacts_output=Path(final_output,"chain_A_contacts.txt")
+                        chain_B_contacts_output=Path(final_output,"chain_B_contacts.txt")
+                        fh.write_file(chain_A_contacts_output,",".join([str(res) for res in chain_A_contacts]))
+                        fh.write_file(chain_B_contacts_output,",".join([str(res) for res in chain_B_contacts]))
