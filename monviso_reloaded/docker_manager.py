@@ -104,6 +104,21 @@ class ClusteringStructure:
 
         rotation_fit=Rotation.align_vectors(ref_ca_positions,fit_ca_positions)
         self.ca_positions=rotation_fit[0].apply(self.ca_positions)
+    
+    def calculate_smaller_chain_RMSD(self,reference):
+        if self.chain_a_count<self.chain_b_count:
+            ref_ca_positions=reference.ca_positions[:self.chain_a_count]
+            fit_ca_positions=self.ca_positions[:self.chain_a_count]
+        else:
+            ref_ca_positions=reference.ca_positions[self.chain_b_count:]
+            fit_ca_positions=self.ca_positions[self.chain_b_count:]
+            
+        distances = np.linalg.norm(ref_ca_positions - fit_ca_positions, axis=1)
+        distances_sqrd= distances**2
+        rmsd= np.sqrt( distances_sqrd.mean())
+        return rmsd
+        
+        
 class HaddockManager:
     def __init__(self, protein1: DockableStructure,protein2: DockableStructure,output:Path, haddock_selection: str, haddock_cutoff: float):
         self.protein1=protein1
@@ -211,7 +226,7 @@ class DockingManager:
         self.run_megadock()
         self.run_hdocklite()
         self.run_haddock()
-        self.cluster()
+        self.cluster_structures()
         #self.run_final()
         
     def load_structures(self):
@@ -366,13 +381,69 @@ class DockingManager:
                         p2.change_path(p2.path,"A") #Revert chain name change
                         
     
-    def cluster(self):
-        #List directories with first docking round output
-        dirs=[]
+    def cluster_distance_matrix(self,distance_matrix):
+        """
+        Clustering the structures based on a distance matrix.
+
+        This method applies a clustering algorithm similar to GROMOS for 
+        Molecular Dynamics frames, or Buting clustering for molecules,
+        to the given distance matrix to group structures into clusters based
+        on a cutoff distance. The cutoff distance is optimized automatically
+        to have between 70% and 85% of the structures in the first three clusters.
+
+        Args:
+        distance_matrix (np.ndarray): Distance matrix between structures.
+
+        Returns:
+        list: List of clusters, where each element is a tuple containing the
+              centroid index and the list of indices of the structures in the cluster.
+        """
+        cutoff_max=distance_matrix.max()
+        cutoff_min=distance_matrix.min()
+        cutoff=(cutoff_max+cutoff_min)/2
+        top3cluster= 0.0 #percent of structures
+        while top3cluster<0.7 or top3cluster>0.85:
+            print(f"Clustering with cutoff {round(cutoff,3)} Å...")
+            clusters=[]
+            processing_distance_matrix=distance_matrix.copy()
+            entriesID=np.array([n for n in range(distance_matrix.shape[0])])
+            print("Remaining structures...",end="")
+            while processing_distance_matrix.shape[0]>0:
+                    print(f"{processing_distance_matrix.shape[0]}",end="...")
+                    distances_within_cutoff = processing_distance_matrix <= cutoff
+                    new_centroid = np.argmax(distances_within_cutoff.sum(axis=1))
+                    centroid_original_id = entriesID[new_centroid]
+                    selection = distances_within_cutoff[new_centroid].astype(bool)
+                    new_cluster = entriesID[selection] 
+                    # Remove rows and columns for selected items
+                    mask = ~selection
+                    entriesID = entriesID[mask]
+                    processing_distance_matrix = processing_distance_matrix[mask][:, mask]
+                    clusters.append([centroid_original_id, new_cluster])
+            print("")
+            if len(clusters) < 3:
+                cutoff_max = cutoff
+            else:
+                top3cluster = sum([len(c[1]) for c in clusters[:3]]) / distance_matrix.shape[0]
+                if 0.7 <= top3cluster <= 0.85:
+                    break
+                elif top3cluster > 0.85:
+                    cutoff_max = cutoff
+                else:
+                    cutoff_min = cutoff
+
+            cutoff = (cutoff_min + cutoff_max) / 2
+            print("New attempt with different cutoff.")
         
+        print(f"Top 10 cluster size: "+" ".join([str(len(c[1])) for c in clusters[:10]]))
+        print(f"Top 3 clusters coverage: {round(top3cluster*100,2)}%")
+        return clusters
+                
+    def cluster_structures(self):        
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
                 for p2 in couple[1]:
+                    dirs=[]
                     directory_name=p1.gene+"-"+p2.gene
                     file_name=p1.name+"-"+p2.name
                     file_name=file_name.replace(".pdb","")
@@ -407,7 +478,12 @@ class DockingManager:
                     for struct in structures_for_clustering:
                         struct.fit_on_reference(structures_for_clustering[0])
 
+                    #Create distance matrix
+                    distance_matrix= np.zeros((len(structures_for_clustering),len(structures_for_clustering)))
+                    for s1, struct1 in enumerate(structures_for_clustering):
+                        for s2, struct2 in enumerate(structures_for_clustering[s1:]):
+                            rmsd=struct1.calculate_smaller_chain_RMSD(struct2)
+                            distance_matrix[s1,s1+s2]=rmsd
+                            distance_matrix[s1+s2,s1]=rmsd
         
-        
-        
-        
+                    self.cluster_distance_matrix(distance_matrix)
