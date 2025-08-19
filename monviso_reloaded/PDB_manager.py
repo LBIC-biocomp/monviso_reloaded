@@ -10,7 +10,7 @@ from .file_handler import FileHandler
 
 class ChainSelection(Select):
     def __init__(self, chain_letters):
-        self.chain_letters = chain_letters.upper()
+        self.chain_letters = chain_letters
         self.standard_residues = [
             "ALA",
             "ARG",
@@ -85,7 +85,7 @@ class ChainSelection(Select):
 
     def accept_chain(self, chain):
         # Filter the chain
-        return (chain.id.upper() == self.chain_letters)
+        return (chain.id == self.chain_letters)
 
     def accept_atom(self, atom):
         # Filter for standard atoms
@@ -206,9 +206,6 @@ class PDB_manager:
             return resolution
 
         else:
-            # The content of the following "if" cleans the NMR structures
-            # But it's still missing an estimate of the reolution. Therefore
-            # these structures will be cleaned, and included in all cases..
             if "NMR" in structure.header["structure_method"].upper():
                 selection=self._filter_residues_based_on_rmsf(structure,resolution_cutoff)
                 if selection:

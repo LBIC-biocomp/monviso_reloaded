@@ -32,7 +32,7 @@ class Template:
 
         self.usable = True  # or False after checks
         self.pdb_name = pdb_name[:4]
-        self.pdb_chain = pdb_name[-1].upper()
+        self.pdb_chain = pdb_name[5:] #.upper()
         self.gene_name = gene_name
         self.out_path = Path(out_path)
         self.isoform_name = isoform_name

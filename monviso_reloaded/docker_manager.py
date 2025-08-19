@@ -1,6 +1,8 @@
 import subprocess
 import pandas as pd
 import os
+import gzip
+import shutil
 import numpy as np
 from pathlib import Path
 from scipy.spatial.transform import Rotation
@@ -280,7 +282,7 @@ class DockingManager:
         self.run_hdocklite()
         self.run_haddock()
         self.cluster_structures()
-        #self.run_final()
+        self.run_final()
         
     def load_structures(self):
         """For each couple of genes in self.gene_list,
@@ -311,7 +313,7 @@ class DockingManager:
                 fh.create_directory(Path(self.output_path,"Docked","-".join(gene_couple),"FINAL"))
     
     
-    def run_megadock(self,n_exported_structs=100):
+    def run_megadock(self,n_exported_structs=1000):
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
                 for p2 in couple[1]:
@@ -349,7 +351,7 @@ class DockingManager:
                         else:
                             print(f"Skipping MEGADOCK job. Output {str(output)} already exists.")
     
-    def run_hdocklite(self,n_exported_structs=100):
+    def run_hdocklite(self,n_exported_structs=1000):
         for couple in self.coupled_structure_lists:
             for p1 in couple[0]:
                 for p2 in couple[1]:
@@ -408,7 +410,6 @@ class DockingManager:
                         if not fh.check_existence(output):
                             fh.create_directory(output)
                             hm= HaddockManager(p1,p2,output,self.haddock_selection, self.haddock_cutoff)
-                            #configfile=hm.createConfig()
                             p1.write_sasa_residues(sasa_res1)
                             p1.write_pesto_residues(pesto_res1)
                             p2.write_sasa_residues(sasa_res2)
@@ -577,3 +578,35 @@ class DockingManager:
                         chain_B_contacts_output=Path(final_output,"chain_B_contacts.txt")
                         fh.write_file(chain_A_contacts_output,",".join([str(res) for res in chain_A_contacts]))
                         fh.write_file(chain_B_contacts_output,",".join([str(res) for res in chain_B_contacts]))
+                        
+    def run_final(self):
+        for couple in self.coupled_structure_lists:
+            for p1 in couple[0]:
+                for p2 in couple[1]:
+                    directory_name=p1.gene+"-"+p2.gene
+                    file_name=p1.name+"-"+p2.name
+                    file_name=file_name.replace(".pdb","")
+                    
+                    output=Path(self.output_path,"Docked",directory_name,"FINAL",file_name)
+                    
+                    chain_A_res=Path(output,"chain_A_contacts.txt")
+                    chain_B_res=Path(output,"chain_A_contacts.txt")
+                    restraints=Path(output,"restraints.tbl")
+                    config_path=Path(output,"docking.cfg")
+
+                    with FileHandler() as fh:
+                        if not fh.check_existence(Path(output,"run")):
+                            fh.create_directory(output)
+                            hm= HaddockManager(p1,p2,output,"cluster", self.haddock_cutoff)
+                            p2.change_path(p2.path,"B")
+                            hm.generate_tbl(chain_A_res,chain_B_res,restraints)
+                            tbl_path=restraints
+                            hm.default_config+="[seletop]\nselect = 100\n[flexref]\ntolerance = 5\n[clustfcc]\n[seletopclusts]\ntop_models = 3"
+                            hm.generate_config(p1,p2,tbl_path,config_path)
+                            hm.run(config_path)
+                        
+                        else:
+                            print(f"Skipping Haddock job. Folder {str(output)} already exists.")
+                            
+                        p2.change_path(p2.path,"A") #Revert chain name change
+                        
