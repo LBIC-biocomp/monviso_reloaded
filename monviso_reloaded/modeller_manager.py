@@ -301,6 +301,16 @@ s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=\""""
 
     def run(self) -> None:
         
+        if len(self.isoform.templates) == 0:
+            if len(self.isoform.aligned_sequence) <= 0:
+                pass #TO DO: change number of if statement and add ab initio modelling function
+        else:
+            print(f"No templates available for {self.isoform.gene_name} "
+              f"{self.isoform.isoform_name}. Skipping modeling.")
+            self.mutation_is_modellable = False
+            return
+
+
         if self.mutation_is_modellable==False:
             print("Modelling of mutation "+"".join(self.mutation)+
                   " was excluded on "+self.isoform.gene_name+" "+

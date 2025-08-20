@@ -99,7 +99,8 @@ class HomologyModelRun:
 
     def load_templates(self) -> None:
         for gene in self.genes:
-            for isoform in gene.isoforms:
+            modellable_isoforms=[iso for iso in gene.isoforms if iso.modellable]
+            for isoform in modellable_isoforms:
                 isoform.load_templates(
                     int(self.parameters["PDB_TO_USE"]),
                     float(self.parameters["RESOLUTION"]),

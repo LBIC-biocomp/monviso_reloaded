@@ -131,9 +131,12 @@ class Isoform:
             else:
                 with Cobalt() as cobalt:
                     cobalt.run(hits_path, aligned_path, cobalt_home)
+            if not fh.check_existence(aligned_path) or fh.read_file(aligned_path).strip() == "":
+                self.modellable = False
+                print(f"Alignment of {self.gene_name} {self.isoform_name} is empty. Not modellable.")
 
     def buildHMM(self, hmmer_home: Union[str, Path]) -> Union[str, Path]:
-        """Take the aligned cobalt output from the aligned.fast file
+        """Take the aligned cobalt output from the aligned.fasta file
         and use it as query for  hmmbuild.
 
         Args:
@@ -167,6 +170,9 @@ class Isoform:
             where executables are stored.
             databse (Union[str,Path]): Where the PDB databank sequences are stored
         """
+        if not self.modellable:
+            print(f"{self.gene_name} {self.isoform_name} excluded before HMMer search.")
+            return None
         with FileHandler() as fh:
             hmm_path = self.buildHMM(hmmer_home=hmmer_home)
             if not fh.check_existence(hmm_path):
