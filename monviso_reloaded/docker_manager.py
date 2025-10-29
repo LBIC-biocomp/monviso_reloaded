@@ -359,32 +359,42 @@ class DockingManager:
                     file_name=p1.name+"-"+p2.name
                     file_name=file_name.replace(".pdb","")
 
-                    tmp_output=Path("./","Hdock.out")
-                    output=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name,file_name+".out")
+                    output=Path(file_name+".out")
+                    outputdir=Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name)
                     with FileHandler() as fh:
-                        fh.create_directory(Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name))
-                        if not fh.check_existence(output):
-                            p2.change_path(p2.path,"B")
-                            command = f"{str(Path(self.hdocklite_home,'hdock'))} {str(p1.path)} {p2.path} -out {str(tmp_output)}"
+                        fh.create_directory(outputdir)
+                        if not fh.check_existence(Path(outputdir,output)):
+                            p1.change_path( p1.path,new_chain_name="A")
+                            p2.change_path( p2.path,new_chain_name="B")
+                            fh.copy_file(p1.path, Path(outputdir,p1.path.name))
+                            fh.copy_file(p2.path, Path(outputdir,p2.path.name))
+                            
+                            cwd=Path.cwd()
+                            os.chdir(outputdir)
+                            out=self.output_path
+                            command = f"{str(Path(self.hdocklite_home,'hdock'))} {p1.path.name} {p2.path.name} -out {str(output)}"
                             subprocess.run(
                                 command, shell=True, universal_newlines=True, check=True
                             )
+                            os.chdir(cwd)
                             p2.change_path(p2.path,"A") #Revert change
-                            fh.move_file(tmp_output,output)
+                            #fh.move_file(Path(out,tmp_output),output)
                         else:
                             print(f"Skipping HDOCKlite job. Output {str(output)} already exists.")
                         
                         exported_pdb=[file_name+f"_{ID+1}.pdb" for ID in range(n_exported_structs)]
-                        exported_pdb_path=[Path(self.output_path,"Docked",directory_name,"HDOCKLITE",file_name,file) for file in exported_pdb]
+                        exported_pdb_path=[Path(outputdir,file) for file in exported_pdb]
                         
+                        cwd=Path.cwd()
+                        os.chdir(outputdir)
                         command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} model.pdb -nmax {n_exported_structs} -complex -models"
                         subprocess.run(
                             command, shell=True, universal_newlines=True, check=True
                             )
 
-                        for modelID in range(n_exported_structs):
-                                fh.move_file(Path(Path.cwd(),f"model_{modelID+1}.pdb"),exported_pdb_path[modelID])
-                        
+                        #for modelID in range(n_exported_structs):
+                        #        fh.move_file(Path(cwd,f"model_{modelID+1}.pdb"),exported_pdb_path[modelID])
+                        os.chdir(cwd)
 
     def run_haddock(self):
         for couple in self.coupled_structure_lists:
