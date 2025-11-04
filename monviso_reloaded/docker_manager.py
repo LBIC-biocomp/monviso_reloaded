@@ -39,6 +39,11 @@ class DockableStructure:
             pm.change_chain_and_save(str(self.path),new_chain_name,str(path_to))
             self.path=Path(path_to)
     
+    def remove_altlocs(self, path_to):
+        with PDB_manager() as pm:
+            pm.remove_altlocs(self.path, path_to)
+            self.path=path_to
+    
     def write_sasa_residues(self, output_path):
         "Writes residues in the top10% percentile for absolute SASA."
         self.residuesasa_db=pd.read_csv(self.residuesasa)
@@ -172,6 +177,30 @@ class ClusteringStructure:
         distances_sqrd = distances**2
         rmsd = np.sqrt(distances_sqrd.mean())
         return rmsd
+    
+    def invert(self):
+        """
+        Invert chain A and chain B in-place.
+        Needed if Haddock finds the original chain B to be the smallest one. In this case,
+        HADDOCK inverts chains A and B's names and order. Calling this method, fixes it.
+
+        Swaps CA positions, residue numbers, and chain counts.
+        """
+        # Slice indices
+        a_count = self.chain_a_count
+        b_count = self.chain_b_count
+
+        # Swap CA positions
+        self.ca_positions[:a_count], self.ca_positions[a_count:a_count+b_count] = \
+            self.ca_positions[a_count:a_count+b_count].copy(), self.ca_positions[:a_count].copy()
+
+        # Swap residue numbers
+        self.residue_numbers[:a_count], self.residue_numbers[a_count:a_count+b_count] = \
+            self.residue_numbers[a_count:a_count+b_count], self.residue_numbers[:a_count]
+
+        # Swap counts
+        self.chain_a_count, self.chain_b_count = b_count, a_count
+
     
         
         
@@ -332,6 +361,8 @@ class DockingManager:
                             )
 
                             for i in range(n_exported_structs):
+                                p1.remove_altlocs(p1.path)
+                                p2.remove_altlocs(p2.path)
                                 p2.change_path(p2.path,"B")
                                 exported_pdb=file_name+f".{i}.pdb"
                                 exported_pdb_path=Path(self.output_path,"Docked",directory_name,"MEGADOCK",file_name,exported_pdb)
@@ -385,6 +416,10 @@ class DockingManager:
                         exported_pdb=[file_name+f"_{ID+1}.pdb" for ID in range(n_exported_structs)]
                         exported_pdb_path=[Path(outputdir,file) for file in exported_pdb]
                         
+                        p1.change_path( p1.path,new_chain_name="A")
+                        p2.change_path( p2.path,new_chain_name="B")
+                        fh.copy_file(p1.path, Path(outputdir,p1.path.name))
+                        fh.copy_file(p2.path, Path(outputdir,p2.path.name))
                         cwd=Path.cwd()
                         os.chdir(outputdir)
                         command = f"{str(Path(self.hdocklite_home,'createpl'))} {str(output)} model.pdb -nmax {n_exported_structs} -complex -models"
@@ -395,6 +430,10 @@ class DockingManager:
                         #for modelID in range(n_exported_structs):
                         #        fh.move_file(Path(cwd,f"model_{modelID+1}.pdb"),exported_pdb_path[modelID])
                         os.chdir(cwd)
+                        p2.change_path(p2.path,"A") #Revert change
+                        fh.remove_file(Path(outputdir,p1.path.name))
+                        fh.remove_file(Path(outputdir,p2.path.name))
+
 
     def run_haddock(self):
         for couple in self.coupled_structure_lists:
@@ -533,10 +572,33 @@ class DockingManager:
                     
                     #Fix chain A and chain B atom counts for HOCKlite molecules
                     #Copy the number from haddock structures to all other structures
-                    for struct in structures_for_clustering:
-                        struct.chain_a_count=structures_for_clustering[0].chain_a_count
-                        struct.chain_b_count=structures_for_clustering[0].chain_b_count
-                        
+                    #for struct in structures_for_clustering:
+                    #    struct.chain_a_count=structures_for_clustering[0].chain_a_count
+                    #    struct.chain_b_count=structures_for_clustering[0].chain_b_count
+                    # ^^^ commented out to test a more stable fix for Haddock naming chains 
+                    
+                    #Check that all chain numbers are the same for HDOCKlite and MEGADOCK
+                    struct_selection=[struct for struct in structures_for_clustering if struct.software!="HADDOCK"]
+                    ref_chain_A_count=struct_selection[0].chain_a_count
+                    ref_chain_B_count=struct_selection[0].chain_b_count
+                    for struct in struct_selection:
+                        if struct.chain_a_count!=ref_chain_A_count:
+                            raise RuntimeError(f"{struct.path}:\nWrong CA atom count in chain A of {struct.software}: {struct.chain_a_count}, but should be {ref_chain_A_count}")
+                        if struct.chain_b_count!=ref_chain_B_count:
+                            raise RuntimeError(f"{struct.path}:\nWrong CA atom count in chain B of {struct.software}: {struct.chain_b_count}, but should be {ref_chain_B_count}")
+                    #For each HADDOCK structure check if chain A has the same number of CA atoms of HDOCKLITE
+                    #If not, check if HADDOCK has inverted the two chains and revert them
+                    #Or throw an error
+                    struct_selection=[struct for struct in structures_for_clustering if struct.software=="HADDOCK"]
+                    for struct in struct_selection:
+                        if struct.chain_a_count!=ref_chain_A_count:
+                            if struct.chain_a_count==ref_chain_B_count:
+                                struct.invert()
+                            else:
+                                raise RuntimeError(f"{struct.path}:\nWrong CA atom count in chain B of {struct.software}, when compared to HDOCKlite.")
+                    
+                    print("Ready for clustering.")
+
                     #And then fit all structures on the first structure of Haddock
                     
                     for struct in structures_for_clustering:

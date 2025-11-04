@@ -284,6 +284,30 @@ class PDB_manager:
 
             io.set_structure(structure)
             io.save(output_path, ChainSelection(chain_name))
+            
+    def remove_altlocs(self, input_pdb_path: Union[str, Path], output_pdb_path: Union[str, Path]) -> None:
+        """
+        Remove alternative atom locations (altLoc) from a PDB file.
+        Keeps only the first conformer (priority: 'A', else first found).
+
+        Args:
+            input_pdb_path (Union[str, Path]): Input PDB file path.
+            output_pdb_path (Union[str, Path]): Path to save the cleaned PDB.
+        """
+
+        pdblines=open(input_pdb_path).readlines()
+        output=[]
+        for l,line in enumerate(pdblines):
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                if line[16:17]==" " or line[16:17]=="A":
+                    output.append(line)
+            else:
+                output.append(line)
+        
+        out_file=open(output_pdb_path,"w")
+        out_file.write("".join(output))
+        out_file.close()
+                
 
     def _filter_residues_based_on_rmsf(self,structure,cutoff):
         """ From a Biopython structure with multiple models, get the per-residue RMSF,
