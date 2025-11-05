@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import numpy as np
 
-from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection, MMCIFParser
+from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection, MMCIFParser, MMCIFIO
 from Bio.PDB.Polypeptide import index_to_one, three_to_index
 
 from .file_handler import FileHandler
@@ -66,7 +66,7 @@ class ChainSelection(Select):
                              'SD',
                              'SG']
 
-        self.first_model = True  # see accet_model method
+        self.first_model = True  # see accept_model method
 
     def accept_model(self, model):
         # Accept only the first model
@@ -187,11 +187,18 @@ class PDB_manager:
                     resolution = float(parser._mmcif_dict["_em_3d_reconstruction.resolution"][0])
                 except ValueError:
                     pass  # Resolution could not be converted to a float
-        if resolution:
+        
+        if isinstance(resolution, (int, float)):
+            
             if resolution <= resolution_cutoff:
+                
                 with FileHandler() as fh:
-                    io = PDBIO()
+                    io = MMCIFIO() 
                     io.set_structure(structure)
+                    chains = [c.id for c in structure.get_chains()]
+                    if chain_letter not in chains:
+                        print(f"Warning: chain {chain_letter} not found in structure. No file will be saved.")
+
                     if not fh.check_existence(output_pdb_path):
                         io.save(
                             str(output_pdb_path), ChainSelection(chain_letter)
@@ -203,14 +210,14 @@ class PDB_manager:
                     #    [line for line in saved_file if "HETATM" not in line]
                     #)
                     #fh.write_file(output_pdb_path, saved_file)
-            return resolution
+                return resolution
 
         else:
             if "NMR" in structure.header["structure_method"].upper():
                 selection=self._filter_residues_based_on_rmsf(structure,resolution_cutoff)
                 if selection:
                     with FileHandler() as fh:
-                        io = PDBIO()
+                        io = MMCIFIO()
                         io.set_structure(structure)
                         nmr_selector=NMR_ChainSelection(chain_letter)
                         nmr_selector.load_residue_selection(selection)
@@ -243,9 +250,9 @@ class PDB_manager:
             fasta sequence.
         """
         with FileHandler() as fh:
-            parser = PDBParser(QUIET=True)
+            parser = MMCIFParser(QUIET=True)
             structure = parser.get_structure("structure", str(pdb_path))
-            io = PDBIO()
+            io = MMCIFIO()
             io.set_structure(structure)
 
             residues = Selection.unfold_entities(structure, "R")

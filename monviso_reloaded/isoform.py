@@ -242,14 +242,24 @@ class Isoform:
                 and fh.check_existence(top_templates_path)
             ):
                 templates_content = fh.read_file(templates_path).splitlines()
+                
                 pdb_list = [
                     line[:16].rstrip()  #Only first 16 charachers considered, but needs to be changed for longer chain names or new PDB IDs
                     for line in templates_content
                     if line[0]!="#"
                 ]
-                templates_list = pdb_list[:max_pdb]
+                
+                #Keep a list of unique structure IDs to create a clean list without repetitions
+                uniqueIDs=[] 
+                clean_pdb_list=[]
+                for pdbID in pdb_list:
+                    if pdbID.split("_")[0] not in uniqueIDs:
+                        clean_pdb_list.append(pdbID)
+                        uniqueIDs.append(pdbID.split("_")[0])
+                
+                templates_list = clean_pdb_list[:max_pdb]
                 fh.write_file(top_templates_path, "\n".join(templates_list))
-                fh.write_file(pdb_list_path, "\n".join(pdb_list))
+                fh.write_file(pdb_list_path, "\n".join(clean_pdb_list))
             templates_list = fh.read_file(top_templates_path).splitlines()
             return templates_list
 

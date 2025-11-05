@@ -43,8 +43,8 @@ class Template:
         self.mmCIF_filename = Path(
             self.templates_directory, self.pdb_name + ".cif"
         )
-        self.clean_pdb_filename = Path(
-            self.templates_directory, pdb_name + "_clean.pdb"
+        self.clean_mmCIF_filename = Path(
+            self.templates_directory, pdb_name + "_clean.cif"
         )
         self.clean_fasta_file = Path(
             self.templates_directory, pdb_name + ".fasta"
@@ -58,7 +58,7 @@ class Template:
 
         self.get_pdb_file()
         if self.usable:  # This first check removes PDBs with obsolete files
-            self.get_clean_pdb_chain()
+            self.get_clean_mmCIF_chain()
         if self.usable: # The second one actually checks for resolution, etc.
             self.get_fasta()
 
@@ -83,7 +83,7 @@ class Template:
                     else:
                         self.usable=False
 
-    def get_clean_pdb_chain(self) -> None:
+    def get_clean_mmCIF_chain(self) -> None:
         """Take the original PDB file in the template directory,
         extract the standard atoms from the single chain of interest,
         save it as a new file.
@@ -96,7 +96,7 @@ class Template:
                     file=self.mmCIF_filename
             self.resolution = pm.extract_clean_chain(
                 file,
-                self.clean_pdb_filename,
+                self.clean_mmCIF_filename,
                 self.pdb_chain,
                 self.resolution_cutoff,
             )
@@ -110,7 +110,7 @@ class Template:
         """
         with PDB_manager() as pm:
             self.sequence = pm.extract_fasta(
-                self.pdb_name, self.clean_pdb_filename, self.clean_fasta_file
+                self.pdb_name, self.clean_mmCIF_filename, self.clean_fasta_file
             )
 
     def add_aligned_sequence(self, aligned_sequence: str) -> None:
