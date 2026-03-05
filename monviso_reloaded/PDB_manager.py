@@ -4,6 +4,7 @@ import numpy as np
 
 from Bio.PDB import PDBIO, PDBList, PDBParser, Select, Selection, MMCIFParser, MMCIFIO
 from Bio.PDB.Polypeptide import index_to_one, three_to_index
+from Bio.PDB.Structure import Structure
 
 from .file_handler import FileHandler
 
@@ -316,46 +317,62 @@ class PDB_manager:
         out_file.close()
                 
 
-    def _filter_residues_based_on_rmsf(self,structure,cutoff):
-        """ From a Biopython structure with multiple models, get the per-residue RMSF,
-        and return a list of residues with a RMSF with cutoff.
+    def _filter_residues_based_on_rmsf(self,structure: Structure, cutoff: float):
+        """
+        Compute per-residue RMSF from a Biopython structure with multiple models
+        and return a boolean list indicating which residues are below a cutoff.
 
         Args:
-            structure: a Biopython-parsed structure
-            cutoff:
-            
+            structure: Biopython Structure object with multiple models
+            cutoff: RMSF threshold
+
         Returns:
-            accepted_residues: Bool list for accepted residues, or False if calculation not possible
+            accepted_residues: list[bool] for accepted residues
         """
+
+        models = list(structure.get_models())
+        if len(models) < 2:
+            pri
+        # Extract residues for each model
+        residues_per_model = [list(m.get_residues()) for m in models]
+
+        # Check residue count consistency
+        n_residues = [len(rlist) for rlist in residues_per_model]
+        if len(set(n_residues)) != 1:
+            raise ValueError("Different number of residues per model; cannot compute RMSF reliably.")
+
+        n_models = len(models)
+        n_res = n_residues[0]
+
+        rmsf_values = []
+
+        for i in range(n_res):
+            # Get atoms for the i-th residue across models
+            atom_sets = [list(rlist[i].get_atoms()) for rlist in residues_per_model]
+
+            # Check atom count consistency
+            atom_counts = [len(a) for a in atom_sets]
+            if len(set(atom_counts)) != 1:
+                # If atoms differ between models, skip this residue
+                rmsf_values.append(np.nan)
+                continue
+
+            coords = np.array([[atom.get_coord() for atom in atoms] for atoms in atom_sets])  # shape: (n_models, n_atoms, 3)
+
+            # Compute per-atom RMSF
+            mean_coords = coords.mean(axis=0)  # mean position per atom
+            sq_diff = np.square(coords - mean_coords)
+            rmsf_per_atom = np.sqrt(sq_diff.sum(axis=(0, 2)) / n_models)  # RMSF per atom
+
+            # Average RMSF across atoms for residue
+            residue_rmsf = np.mean(rmsf_per_atom)
+            rmsf_values.append(residue_rmsf)
+
+        # Boolean mask of residues below cutoff
+        accepted = [r <= cutoff if not np.isnan(r) else False for r in rmsf_values]
         
-        models=[m for m in structure.get_models()]
-        if len(models)<2:
-        #Low number of models. Stop calc.
+        if sum(accepted)<3: #Skip structure if fewer than 3 residues below cutoff
             return False
-        
-        residues=[[r for r in m.get_residues()] for m in models]
-        number_of_residues=[len(residue_list) for residue_list in residues]
-        check_same_number_per_model=True
-        for n in number_of_residues:
-            if n!=number_of_residues[0]:
-                check_same_number_per_model=False
-        if not check_same_number_per_model:
-        #Different number of residues in the models. Stop calc.
-            return False
-        
-        rmsf=[]
-        for r, residue in enumerate(residues[0]): #use first model residues as iterator
-            atoms=[residue_list[r].get_atoms() for residue_list in residues]
-            coords=np.array([[a.get_coord() for a in atom_list] for atom_list in atoms])
-            
-            #Calculate atom fluctuation as:
-            # sqrt(sum of squared deviation/ (n frames-1))
-            frames=coords.shape[0]
-            mean=coords.mean(axis=0)
-            deviations=np.array([np.linalg.norm(frame- mean,axis=-1) for frame in coords])
-            sum_of_deviations=deviations.sum(axis=0)
-            f=np.sqrt(sum_of_deviations/(frames-1))
-            residue_f=np.mean(f)            
-            rmsf.append(residue_f<=cutoff)
-        return rmsf
+
+        return accepted
         
